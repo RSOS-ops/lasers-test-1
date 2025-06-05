@@ -7,6 +7,9 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
 
+// Clock for animation timing
+const clock = new THREE.Clock();
+
 // Camera Setup
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
@@ -43,6 +46,14 @@ spotLight.decay = 2;
 // Model Setup & Loading
 let model;
 
+// Laser Global Variables
+let laserLine;
+const laserOrigin = new THREE.Vector3(-10, 1, 0); // Example starting point
+const initialLaserDirection = new THREE.Vector3(1, 0, 0).normalize(); // Example initial direction
+const interactiveObjects = []; // To store objects the laser can hit
+const MAX_LASER_LENGTH = 20; // Max length if no hit
+const MAX_BOUNCES = 3; // Max number of laser bounces
+
 function adjustCameraForModel() {
     if (!model) return;
 
@@ -75,6 +86,15 @@ function adjustCameraForModel() {
 const gltfLoader = new GLTFLoader();
 const modelUrl = 'https://raw.githubusercontent.com/RSOS-ops/lasers-test-1/main/cube-beveled-silver.glb';
 
+// Laser Line Setup
+const laserMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 }); // Red laser
+const points = [];
+points.push(laserOrigin.clone());
+points.push(laserOrigin.clone().add(initialLaserDirection.clone().multiplyScalar(MAX_LASER_LENGTH))); // Initial straight line
+const laserGeometry = new THREE.BufferGeometry().setFromPoints(points);
+laserLine = new THREE.Line(laserGeometry, laserMaterial);
+scene.add(laserLine);
+
 gltfLoader.load(
     modelUrl,
     (gltf) => {
@@ -88,6 +108,8 @@ gltfLoader.load(
         spotLight.target = spotLightTargetObject;
         model.add(spotLight);
 
+        interactiveObjects.push(model); // Add model for laser interaction
+
         adjustCameraForModel(); // Call this after model is processed
     },
     (xhr) => {
@@ -98,18 +120,66 @@ gltfLoader.load(
     }
 );
 
+// Laser Update Function
+function updateLaser() {
+    const raycaster = new THREE.Raycaster();
+    const points = [];
+
+    let currentOrigin = laserOrigin.clone();
+    let currentDirection = initialLaserDirection.clone();
+
+    points.push(currentOrigin.clone());
+
+    for (let i = 0; i < MAX_BOUNCES; i++) {
+        raycaster.set(currentOrigin, currentDirection);
+        const intersects = raycaster.intersectObjects(interactiveObjects, true);
+
+        if (intersects.length > 0) {
+            const intersection = intersects[0];
+            const impactPoint = intersection.point;
+            points.push(impactPoint.clone());
+
+            const surfaceNormal = intersection.face.normal.clone();
+            const worldNormal = new THREE.Vector3();
+            worldNormal.copy(surfaceNormal).transformDirection(intersection.object.matrixWorld);
+
+            if (currentDirection.dot(worldNormal) > 0) {
+                worldNormal.negate();
+            }
+
+            currentDirection.reflect(worldNormal);
+            currentOrigin.copy(impactPoint).add(currentDirection.clone().multiplyScalar(0.001)); // Offset for next ray
+
+            if (i === MAX_BOUNCES - 1) { // If it's the last bounce, draw the final segment
+                points.push(currentOrigin.clone().add(currentDirection.clone().multiplyScalar(MAX_LASER_LENGTH)));
+            }
+        } else {
+            points.push(currentOrigin.clone().add(currentDirection.clone().multiplyScalar(MAX_LASER_LENGTH)));
+            break;
+        }
+    }
+
+    laserLine.geometry.setFromPoints(points);
+    laserLine.geometry.attributes.position.needsUpdate = true;
+}
+
+const rotationSpeed = (2 * Math.PI) / 12; // Radians per second
+
 // Animation Loop
 function animate() {
+    const deltaTime = clock.getDelta(); // Get time elapsed since last frame
     requestAnimationFrame(animate);
+
     if (controls.enableDamping) {
         controls.update();
     }
 
     if (model) { // Check if the model is loaded
-        const rotationIncrement = (2 * Math.PI) / (12 * 60);
-        model.rotation.x += rotationIncrement;
-        model.rotation.y += rotationIncrement;
+        model.rotation.x += rotationSpeed * deltaTime;
+        model.rotation.y += rotationSpeed * deltaTime;
     }
+
+    updateLaser(); // Call the new laser update function
 
     renderer.render(scene, camera);
 }
