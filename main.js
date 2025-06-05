@@ -104,6 +104,13 @@ function animate() {
     if (controls.enableDamping) {
         controls.update();
     }
+
+    if (model) { // Check if the model is loaded
+        const rotationIncrement = (2 * Math.PI) / (12 * 60);
+        model.rotation.x += rotationIncrement;
+        model.rotation.y += rotationIncrement;
+    }
+
     renderer.render(scene, camera);
 }
 animate();
