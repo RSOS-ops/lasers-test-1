@@ -1,4 +1,12 @@
+// Ensure Three.js is loaded
+if (typeof THREE === 'undefined') {
+    console.error('Three.js has not been loaded. Check your script tags.');
+}
+
+// Scene, Camera, Renderer
 let scene, camera, renderer;
+
+// Text variables
 let textMesh;
 let model; // For GLTF model
 const textContent = 'Cory Richard';
@@ -12,8 +20,7 @@ function setupThreeJS() {
 
     // Camera
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(20, 20, 50); // Adjusted for the cube model
-    camera.lookAt(0, 0, 0); // Ensure camera targets the origin
+    camera.position.z = 50; // Initial Z position, will be adjusted
 
     // Renderer
     renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -21,13 +28,18 @@ function setupThreeJS() {
     renderer.setPixelRatio(window.devicePixelRatio);
     document.getElementById('text-container').appendChild(renderer.domElement);
 
-    // Directional Light
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0); // White light, intensity 1
-    directionalLight.position.set(10, 10, 10); // Position: up, right, and in front of the origin
-    directionalLight.target.position.set(0, 0, 0); // Target the origin (where the model is)
+    // SpotLight
+    const spotLight = new THREE.SpotLight(0xffffff, 25); // White light, intensity 25
+    spotLight.position.set(0, 0, 10); // Positioned in front of the model, along Z-axis
+    spotLight.angle = Math.PI / 36; // 5 degrees
+    // spotLight.penumbra = 0.1; // Optional: for softer edges, default is 0
+    // spotLight.decay = 2; // Optional: default is 2 for realistic falloff in physical units
 
-    scene.add(directionalLight);
-    scene.add(directionalLight.target); // Important to add the target to the scene as well
+    // Ensure the spotlight is pointing at the model (or origin)
+    spotLight.target.position.set(0, 0, 0);
+
+    scene.add(spotLight);
+    scene.add(spotLight.target); // Add the target to the scene
 }
 
 function init() {
@@ -38,12 +50,12 @@ function init() {
 
     // Load GLTF model
     loader.load(
-        'https://raw.githubusercontent.com/RSOS-ops/lasers-test-1/main/cube-beveled-silver.glb', // New URL
+        'https://raw.githubusercontent.com/RSOS-ops/lasers-test-1/initial-structure/cube-beveled-silver.glb',
         function (gltf) {
             model = gltf.scene;
-            model.position.set(0, 0, 0);
+            model.position.set(0, 0, 0); // Adjust as needed
             scene.add(model);
-            animate(); // Start animation loop after model is loaded
+            // Ensure model is rendered even if text creation is pending font loading
         },
         undefined, // onProgress callback
         function (error) {
@@ -62,11 +74,17 @@ function init() {
 
     fontLoader.load(
         // THREE.js examples use specific JSON font files.
-        'https://threejs.org/examples/fonts/helvetiker_regular.typeface.json',
+        // For Google Fonts like Roboto, you typically use a tool to convert TTF to this JSON format.
+        // For simplicity in this step, we'll use a standard Three.js font (helvetiker)
+        // and aim to replace it or adjust if direct Google Font loading in Three.js is straightforward.
+        // Alternatively, HTML/CSS text can be overlaid if direct font loading is complex for this stage.
+        // Let's proceed with Helvetiker for now to get the text rendering, then refine font.
+        'https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', // Using a default Three.js font for now
         function (font) {
             createText(font);
+            animate();
         },
-        undefined,
+        undefined, // onProgress callback
         function (error) {
             console.error('Error loading font:', error);
             // Fallback: Display simple HTML text if font loading fails
@@ -141,6 +159,9 @@ function scaleAndPositionText() {
     const desiredTextScreenWidth = visibleWidth * 0.6;
 
     // Ensure the bounding box is up to date for the current geometry.
+    // textGeometry.center() also calls computeBoundingBox, but if geometry somehow changed, this would be a safeguard.
+    // However, since we are not re-creating geometry here, this might be redundant if createText ensures it.
+    // For safety, it's kept, but could be removed if performance profiling shows it's an issue.
     if (!textMesh.geometry.boundingBox) {
         textMesh.geometry.computeBoundingBox();
     }
@@ -172,6 +193,7 @@ function scaleAndPositionText() {
     const verticalOffset = visibleHeight * 0.25;
     textMesh.position.set(0, verticalOffset, 0); // X=0 (centered), Y=offset, Z=0 (at scene origin plane)
 }
+
 
 function onWindowResize() {
     if (camera && renderer) { // Ensure camera and renderer are initialized
