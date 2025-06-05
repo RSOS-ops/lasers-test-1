@@ -170,5 +170,16 @@ function animate() {
     renderer.render(scene, camera);
 }
 
-// Start the application
-init();
+// Start the application after the DOM is fully loaded
+document.addEventListener('DOMContentLoaded', (event) => {
+    if (typeof THREE.GLTFLoader === 'function') {
+        init();
+    } else {
+        console.error('THREE.GLTFLoader is not available. Check script loading order and availability.');
+        // Optionally, provide a user-friendly message on the page
+        const container = document.getElementById('text-container');
+        if (container) {
+            container.innerHTML = '<p style="color: white; font-size: 2vw; text-align: center; margin-top: 40vh;">Error: Could not load essential 3D components. Please try refreshing.</p>';
+        }
+    }
+});
