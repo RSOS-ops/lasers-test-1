@@ -58,13 +58,10 @@ function adjustCameraForModel() {
 
     if (size.x === 0 && size.y === 0 && size.z === 0) return;
 
-    const maxDim = Math.max(size.x, size.y, size.z);
-    const fov = camera.fov * (Math.PI / 180);
-    let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
-
-    // Add some distance for padding
-    cameraZ *= 1.5;
-
+    const modelHeight = size.y;
+    const fovInRadians = THREE.MathUtils.degToRad(camera.fov);
+    let cameraZ = (modelHeight / 2) / Math.tan(fovInRadians / 2);
+    cameraZ *= 2; // Double the distance to make the model appear half the size
     camera.position.set(0, 0, cameraZ);
 
     // Update controls target to look at the model's new origin (0,0,0)
