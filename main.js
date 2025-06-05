@@ -50,6 +50,13 @@ let model;
 let laserLine;
 const laserOrigin = new THREE.Vector3(-10, 1, 0); // Example starting point
 const initialLaserDirection = new THREE.Vector3(1, 0, 0).normalize(); // Example initial direction
+
+// Second Laser Global Variables
+let laserLine2;
+const laserOrigin2 = new THREE.Vector3(Math.random() * 20 - 10, Math.random() * 20 - 10, Math.random() * 20 - 10);
+const initialLaserDirection2 = new THREE.Vector3().subVectors(new THREE.Vector3(0,0,0), laserOrigin2).normalize();
+const laserMaterial2 = new THREE.LineBasicMaterial({ color: 0xff0000 }); // Red laser for the second laser
+
 const interactiveObjects = []; // To store objects the laser can hit
 const MAX_LASER_LENGTH = 20; // Max length if no hit
 const MAX_BOUNCES = 3; // Max number of laser bounces
@@ -94,6 +101,14 @@ points.push(laserOrigin.clone().add(initialLaserDirection.clone().multiplyScalar
 const laserGeometry = new THREE.BufferGeometry().setFromPoints(points);
 laserLine = new THREE.Line(laserGeometry, laserMaterial);
 scene.add(laserLine);
+
+// Second Laser Line Setup
+const points2 = [];
+points2.push(laserOrigin2.clone());
+points2.push(laserOrigin2.clone().add(initialLaserDirection2.clone().multiplyScalar(MAX_LASER_LENGTH)));
+const laserGeometry2 = new THREE.BufferGeometry().setFromPoints(points2);
+laserLine2 = new THREE.Line(laserGeometry2, laserMaterial2);
+scene.add(laserLine2);
 
 gltfLoader.load(
     modelUrl,
@@ -163,6 +178,49 @@ function updateLaser() {
     laserLine.geometry.attributes.position.needsUpdate = true;
 }
 
+// Laser Update Function for the second laser
+function updateLaser2() {
+    const raycaster = new THREE.Raycaster();
+    const points = [];
+
+    let currentOrigin = laserOrigin2.clone();
+    let currentDirection = initialLaserDirection2.clone();
+
+    points.push(currentOrigin.clone());
+
+    for (let i = 0; i < MAX_BOUNCES; i++) {
+        raycaster.set(currentOrigin, currentDirection);
+        const intersects = raycaster.intersectObjects(interactiveObjects, true);
+
+        if (intersects.length > 0) {
+            const intersection = intersects[0];
+            const impactPoint = intersection.point;
+            points.push(impactPoint.clone());
+
+            const surfaceNormal = intersection.face.normal.clone();
+            const worldNormal = new THREE.Vector3();
+            worldNormal.copy(surfaceNormal).transformDirection(intersection.object.matrixWorld);
+
+            if (currentDirection.dot(worldNormal) > 0) {
+                worldNormal.negate();
+            }
+
+            currentDirection.reflect(worldNormal);
+            currentOrigin.copy(impactPoint).add(currentDirection.clone().multiplyScalar(0.001)); // Offset for next ray
+
+            if (i === MAX_BOUNCES - 1) { // If it's the last bounce, draw the final segment
+                points.push(currentOrigin.clone().add(currentDirection.clone().multiplyScalar(MAX_LASER_LENGTH)));
+            }
+        } else {
+            points.push(currentOrigin.clone().add(currentDirection.clone().multiplyScalar(MAX_LASER_LENGTH)));
+            break;
+        }
+    }
+
+    laserLine2.geometry.setFromPoints(points);
+    laserLine2.geometry.attributes.position.needsUpdate = true;
+}
+
 const rotationSpeed = (2 * Math.PI) / 12; // Radians per second
 
 // Animation Loop
@@ -180,6 +238,7 @@ function animate() {
     }
 
     updateLaser(); // Call the new laser update function
+    updateLaser2(); // Call the second laser update function
 
     renderer.render(scene, camera);
 }
