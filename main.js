@@ -48,8 +48,8 @@ let model;
 
 // Laser Global Variables
 let laserLine;
-const laserOrigin = new THREE.Vector3(-10, 1, 0); // Example starting point
-const initialLaserDirection = new THREE.Vector3(1, 0, 0).normalize(); // Example initial direction
+const laserOrigin = new THREE.Vector3(Math.random() * 20 - 10, Math.random() * 20 - 10, Math.random() * 20 - 10);
+const initialLaserDirection = new THREE.Vector3().subVectors(new THREE.Vector3(0,0,0), laserOrigin).normalize();
 
 // Second Laser Global Variables
 let laserLine2;
