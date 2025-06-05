@@ -47,12 +47,24 @@ spotLight.decay = 2;
 let model;
 
 // Laser Global Variables
-let laserLine;
-const laserOrigin = new THREE.Vector3(-10, 1, 0); // Example starting point
-const initialLaserDirection = new THREE.Vector3(1, 0, 0).normalize(); // Example initial direction
-const interactiveObjects = []; // To store objects the laser can hit
-const MAX_LASER_LENGTH = 20; // Max length if no hit
-const MAX_BOUNCES = 3; // Max number of laser bounces
+// let laserLine; // Commented out for multiple lasers
+// const laserOrigin = new THREE.Vector3(-10, 1, 0); // Commented out for multiple lasers
+// const initialLaserDirection = new THREE.Vector3(1, 0, 0).normalize(); // Commented out for multiple lasers
+
+const interactiveObjects = []; // To store objects the laser can hit - Shared by all lasers
+const MAX_LASER_LENGTH = 20; // Max length if no hit - Shared
+const MAX_BOUNCES = 3; // Max number of laser bounces - Shared
+
+const laserConfigs = [];
+const LASER_COLORS = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00]; // Red, Green, Blue, Yellow
+
+// Function to get world coordinates for a screen corner
+function getScreenCornerInWorld(screenX, screenY, camera) {
+    // screenX, screenY are -1 to 1. Z=-1 is near plane in NDC.
+    const vec = new THREE.Vector3(screenX, screenY, -1.0);
+    vec.unproject(camera);
+    return vec;
+}
 
 function adjustCameraForModel() {
     if (!model) return;
@@ -86,14 +98,44 @@ function adjustCameraForModel() {
 const gltfLoader = new GLTFLoader();
 const modelUrl = 'https://raw.githubusercontent.com/RSOS-ops/lasers-test-1/main/cube-beveled-silver.glb';
 
-// Laser Line Setup
-const laserMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 }); // Red laser
-const points = [];
-points.push(laserOrigin.clone());
-points.push(laserOrigin.clone().add(initialLaserDirection.clone().multiplyScalar(MAX_LASER_LENGTH))); // Initial straight line
-const laserGeometry = new THREE.BufferGeometry().setFromPoints(points);
-laserLine = new THREE.Line(laserGeometry, laserMaterial);
-scene.add(laserLine);
+// Screen Corner Coordinates for Laser Origins
+const SCREEN_CORNERS = [
+    { x: -1, y: 1 },  // Top-left
+    { x: 1, y: 1 },   // Top-right
+    { x: -1, y: -1 }, // Bottom-left
+    { x: 1, y: -1 }   // Bottom-right
+];
+
+// Initialize Lasers
+// This needs to run after the camera is set up.
+// Define target for lasers (e.g., center of the scene)
+const laserTargetPosition = new THREE.Vector3(0, 0, 0);
+
+SCREEN_CORNERS.forEach((corner, index) => {
+    const laserOriginPoint = getScreenCornerInWorld(corner.x, corner.y, camera);
+
+    const laserDirectionVector = new THREE.Vector3();
+    laserDirectionVector.subVectors(laserTargetPosition, laserOriginPoint).normalize();
+
+    const laserColor = LASER_COLORS[index % LASER_COLORS.length]; // Cycle through colors
+    const laserMaterial = new THREE.LineBasicMaterial({ color: laserColor });
+
+    const initialPoints = [];
+    initialPoints.push(laserOriginPoint.clone());
+    initialPoints.push(laserOriginPoint.clone().add(laserDirectionVector.clone().multiplyScalar(MAX_LASER_LENGTH)));
+
+    const laserGeometry = new THREE.BufferGeometry().setFromPoints(initialPoints);
+    const line = new THREE.Line(laserGeometry, laserMaterial);
+    scene.add(line);
+
+    laserConfigs.push({
+        line: line,
+        origin: laserOriginPoint,       // Initial origin
+        direction: laserDirectionVector, // Initial direction
+        color: laserColor
+        // currentOrigin and currentDirection will be managed per frame in updateLaser
+    });
+});
 
 gltfLoader.load(
     modelUrl,
@@ -121,46 +163,66 @@ gltfLoader.load(
 );
 
 // Laser Update Function
-function updateLaser() {
-    const raycaster = new THREE.Raycaster();
-    const points = [];
+function updateLasers() {    // New function
+    const raycaster = new THREE.Raycaster(); // Can still be one raycaster reused
 
-    let currentOrigin = laserOrigin.clone();
-    let currentDirection = initialLaserDirection.clone();
-
-    points.push(currentOrigin.clone());
-
-    for (let i = 0; i < MAX_BOUNCES; i++) {
-        raycaster.set(currentOrigin, currentDirection);
-        const intersects = raycaster.intersectObjects(interactiveObjects, true);
-
-        if (intersects.length > 0) {
-            const intersection = intersects[0];
-            const impactPoint = intersection.point;
-            points.push(impactPoint.clone());
-
-            const surfaceNormal = intersection.face.normal.clone();
-            const worldNormal = new THREE.Vector3();
-            worldNormal.copy(surfaceNormal).transformDirection(intersection.object.matrixWorld);
-
-            if (currentDirection.dot(worldNormal) > 0) {
-                worldNormal.negate();
-            }
-
-            currentDirection.reflect(worldNormal);
-            currentOrigin.copy(impactPoint).add(currentDirection.clone().multiplyScalar(0.001)); // Offset for next ray
-
-            if (i === MAX_BOUNCES - 1) { // If it's the last bounce, draw the final segment
-                points.push(currentOrigin.clone().add(currentDirection.clone().multiplyScalar(MAX_LASER_LENGTH)));
-            }
-        } else {
-            points.push(currentOrigin.clone().add(currentDirection.clone().multiplyScalar(MAX_LASER_LENGTH)));
-            break;
-        }
+    let targetPosition;
+    if (model && model.position) { // Check if model is loaded and has a position
+        targetPosition = model.position.clone();
+    } else {
+        targetPosition = new THREE.Vector3(0, 0, 0); // Default target if model not ready
     }
 
-    laserLine.geometry.setFromPoints(points);
-    laserLine.geometry.attributes.position.needsUpdate = true;
+    laserConfigs.forEach(config => {
+        // Dynamically update the laser's primary direction for this frame
+        config.direction.subVectors(targetPosition, config.origin).normalize();
+
+        const points = [];
+
+        // currentOrigin will be the static config.origin for the start of the beam
+        let currentOrigin = config.origin.clone();
+        // currentDirection will be the newly calculated config.direction for the first segment
+        let currentDirection = config.direction.clone();
+
+        points.push(currentOrigin.clone());
+
+        for (let i = 0; i < MAX_BOUNCES; i++) {
+            raycaster.set(currentOrigin, currentDirection);
+
+            if (interactiveObjects.length === 0) {
+                 if (i === 0) points.push(currentOrigin.clone().add(currentDirection.clone().multiplyScalar(MAX_LASER_LENGTH)));
+                break;
+            }
+            const intersects = raycaster.intersectObjects(interactiveObjects, true);
+
+            if (intersects.length > 0) {
+                const intersection = intersects[0];
+                const impactPoint = intersection.point;
+                points.push(impactPoint.clone());
+
+                const surfaceNormal = intersection.face.normal.clone();
+                const worldNormal = new THREE.Vector3();
+                worldNormal.copy(surfaceNormal).transformDirection(intersection.object.matrixWorld);
+
+                if (currentDirection.dot(worldNormal) > 0) {
+                    worldNormal.negate();
+                }
+
+                currentDirection.reflect(worldNormal);
+                currentOrigin.copy(impactPoint).add(currentDirection.clone().multiplyScalar(0.001));
+
+                if (i === MAX_BOUNCES - 1) {
+                    points.push(currentOrigin.clone().add(currentDirection.clone().multiplyScalar(MAX_LASER_LENGTH)));
+                }
+            } else {
+                points.push(currentOrigin.clone().add(currentDirection.clone().multiplyScalar(MAX_LASER_LENGTH)));
+                break;
+            }
+        }
+
+        config.line.geometry.setFromPoints(points);
+        config.line.geometry.attributes.position.needsUpdate = true;
+    });
 }
 
 const rotationSpeed = (2 * Math.PI) / 12; // Radians per second
@@ -179,7 +241,7 @@ function animate() {
         model.rotation.y += rotationSpeed * deltaTime;
     }
 
-    updateLaser(); // Call the new laser update function
+    updateLasers(); // New call
 
     renderer.render(scene, camera);
 }
