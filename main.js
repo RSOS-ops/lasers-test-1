@@ -56,7 +56,7 @@ const MAX_LASER_LENGTH = 20; // Max length if no hit - Shared
 const MAX_BOUNCES = 3; // Max number of laser bounces - Shared
 
 const laserConfigs = [];
-const LASER_COLORS = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00]; // Red, Green, Blue, Yellow
+const LASER_COLORS = [0xff0000, 0x00ff00, 0x0000ff, 0xff00ff]; // Red, Green, Blue, Purple (Magenta)
 
 // Function to get world coordinates for a screen corner
 function getScreenCornerInWorld(screenX, screenY, camera) {
