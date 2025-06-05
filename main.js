@@ -52,7 +52,7 @@ function init() {
     );
 
     // Directional Light (remains)
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 4.0);
     directionalLight.position.set(10, 10, 10);
     directionalLight.target.position.set(0, 0, 0);
     scene.add(directionalLight);
