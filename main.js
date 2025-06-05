@@ -190,7 +190,7 @@ function updateLasers() {    // New function
     }
 
     laserConfigs.forEach((config, laserIndex) => { // Added laserIndex directly
-        const separation = 0.1; // Horizontal separation between lasers
+        const separation = 0.01; // New, much smaller value
         const numLasers = LASER_COLORS.length;
         const offsetAmount = (laserIndex - (numLasers - 1) / 2) * separation;
 
