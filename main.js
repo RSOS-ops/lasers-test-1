@@ -8,6 +8,7 @@ let scene, camera, renderer;
 
 // Text variables
 let textMesh;
+let model; // For GLTF model
 const textContent = 'Cory Richard';
 const fontName = 'Roboto'; // Should match the font loaded in index.html
 const fontWeight = 'Regular'; // or 'Bold' etc. if you chose a specific weight
@@ -26,9 +27,35 @@ function init() {
     renderer.setPixelRatio(window.devicePixelRatio);
     document.getElementById('text-container').appendChild(renderer.domElement);
 
+    // Instantiate GLTFLoader
+    const loader = new THREE.GLTFLoader();
+
+    // Load GLTF model
+    loader.load(
+        'https://raw.githubusercontent.com/RSOS-ops/lasers-test-1/initial-structure/cube-beveled-silver.glb',
+        function (gltf) {
+            model = gltf.scene;
+            model.position.set(0, 0, 0); // Adjust as needed
+            scene.add(model);
+            // Ensure model is rendered even if text creation is pending font loading
+        },
+        undefined, // onProgress callback
+        function (error) {
+            console.error('An error happened while loading the GLTF model:', error);
+        }
+    );
+
     // Load Font
     const fontLoader = new THREE.FontLoader();
     const fontPath = 'https://threejs.org/examples/fonts/helvetiker_regular.typeface.json'; // Placeholder, will load Roboto
+
+    // Directional Light
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0); // White light, intensity 1
+    directionalLight.position.set(10, 10, 10); // Position: up, right, and in front of the origin
+    directionalLight.target.position.set(0, 0, 0); // Target the origin (where the model is)
+
+    scene.add(directionalLight);
+    scene.add(directionalLight.target); // Important to add the target to the scene as well
 
     fontLoader.load(
         // THREE.js examples use specific JSON font files.
@@ -80,13 +107,13 @@ function scaleAndPositionText(font) { // Added font parameter
 
     // Camera and scene setup for scaling calculation
     camera.updateProjectionMatrix();
-    textMesh.position.z = 0; // Place text at z=0 for calculations
-    camera.position.z = 30; // Adjust camera Z to frame the text
+    // textMesh.position.z = 0; // Text is placed at z=0 by default after new TextGeometry and centering.
+    // The camera.position.z is taken from its current setting (e.g., 50 from init())
 
-    const distance = camera.position.z - textMesh.position.z;
+    const distance = camera.position.z - (textMesh.position.z || 0); // textMesh.position.z should be 0 here
     const visibleHeight = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * distance;
     const visibleWidth = visibleHeight * camera.aspect;
-    const desiredTextScreenWidth = visibleWidth * 0.8; // 80% of visible width
+    const desiredTextScreenWidth = visibleWidth * 0.6; // New trial value, make text smaller
 
     // Re-create text geometry for centering and proper scaling
     // This ensures that scaling is applied correctly after centering.
@@ -119,8 +146,10 @@ function scaleAndPositionText(font) { // Added font parameter
         textMesh.scale.set(scale, scale, scale); // Uniform scaling for simplicity, adjust Z scale if depth is an issue
     }
 
-    // Position the centered and scaled mesh at the origin of its Z-plane
-    textMesh.position.set(0, 0, 0);
+    // Position the centered and scaled mesh
+    // Move text up by 25% of visible height from the center of the screen.
+    const verticalOffset = visibleHeight * 0.25;
+    textMesh.position.set(0, verticalOffset, 0); // X=0 due to geometry centering, Z=0 for flatness
 }
 
 
