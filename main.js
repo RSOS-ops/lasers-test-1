@@ -53,7 +53,7 @@ let model;
 
 const interactiveObjects = []; // To store objects the laser can hit - Shared by all lasers
 const MAX_LASER_LENGTH = 20; // Max length if no hit - Shared
-const MAX_BOUNCES = 3; // Max number of laser bounces - Shared
+const MAX_BOUNCES = 1; // Was 3, now 1 for debugging
 
 const laserConfigs = [];
 const LASER_COLORS = [0xff0000, 0x00ff00, 0x0000ff, 0xff00ff]; // Red, Green, Blue, Purple (Magenta)
@@ -142,6 +142,21 @@ gltfLoader.load(
     (gltf) => {
         model = gltf.scene;
 
+        model.traverse((child) => {
+            if (child.isMesh && child.material) {
+                // If material is an array (MultiMaterial)
+                if (Array.isArray(child.material)) {
+                    child.material.forEach(mat => {
+                        mat.side = THREE.DoubleSide;
+                        mat.needsUpdate = true;
+                    });
+                } else { // Single material
+                    child.material.side = THREE.DoubleSide;
+                    child.material.needsUpdate = true;
+                }
+            }
+        });
+
         // Configure and attach the SpotLight to the model
         const spotLightTargetObject = new THREE.Object3D();
         model.add(spotLightTargetObject);
@@ -150,7 +165,15 @@ gltfLoader.load(
         spotLight.target = spotLightTargetObject;
         model.add(spotLight);
 
+        // Model centering and scene addition (assuming this was already here or intended)
+        const box = new THREE.Box3().setFromObject(model);
+        const center = box.getCenter(new THREE.Vector3());
+        model.position.sub(center);
+        scene.add(model); // Ensure model is added to scene after potential repositioning
+
         interactiveObjects.push(model); // Add model for laser interaction
+        console.log('Model added to interactiveObjects:', model);
+        console.log('Model children:', model.children);
 
         adjustCameraForModel(); // Call this after model is processed
     },
@@ -164,6 +187,11 @@ gltfLoader.load(
 
 // Laser Update Function
 function updateLasers() {    // New function
+    if (model) {
+        model.updateMatrixWorld(true); // Force update of model's and its children's world matrices
+        console.log('Model matrixWorld (after forced update):', model.matrixWorld); // Updated log
+    }
+
     const raycaster = new THREE.Raycaster(); // Can still be one raycaster reused
 
     let targetPosition;
@@ -184,6 +212,11 @@ function updateLasers() {    // New function
         // currentDirection will be the newly calculated config.direction for the first segment
         let currentDirection = config.direction.clone();
 
+        const laserIndex = laserConfigs.indexOf(config); // For identifying the laser in logs
+
+        console.log(`Laser ${laserIndex}: Ray Origin:`, currentOrigin.x, currentOrigin.y, currentOrigin.z);
+        console.log(`Laser ${laserIndex}: Ray Direction:`, currentDirection.x, currentDirection.y, currentDirection.z);
+
         points.push(currentOrigin.clone());
 
         for (let i = 0; i < MAX_BOUNCES; i++) {
@@ -194,21 +227,34 @@ function updateLasers() {    // New function
                 break;
             }
             const intersects = raycaster.intersectObjects(interactiveObjects, true);
+            console.log(`Laser ${laserIndex}, Bounce ${i}: Intersects found:`, intersects.length);
 
             if (intersects.length > 0) {
                 const intersection = intersects[0];
+                console.log(`Laser ${laserIndex}, Bounce ${i}: Hit at:`, intersection.point.x, intersection.point.y, intersection.point.z);
+                console.log(`Laser ${laserIndex}, Bounce ${i}: Hit object name:`, intersection.object.name);
+                console.log(`Laser ${laserIndex}, Bounce ${i}: Hit face normal:`, intersection.face.normal.x, intersection.face.normal.y, intersection.face.normal.z);
+
                 const impactPoint = intersection.point;
                 points.push(impactPoint.clone());
 
                 const surfaceNormal = intersection.face.normal.clone();
                 const worldNormal = new THREE.Vector3();
                 worldNormal.copy(surfaceNormal).transformDirection(intersection.object.matrixWorld);
+                console.log(`Laser ${laserIndex}, Bounce ${i}: Original World Normal:`, worldNormal.x, worldNormal.y, worldNormal.z);
 
                 if (currentDirection.dot(worldNormal) > 0) {
+                    console.log(`Laser ${laserIndex}, Bounce ${i}: Negating worldNormal.`);
                     worldNormal.negate();
                 }
+                console.log(`Laser ${laserIndex}, Bounce ${i}: Corrected World Normal:`, worldNormal.x, worldNormal.y, worldNormal.z);
 
-                currentDirection.reflect(worldNormal);
+                const incomingForReflection = currentDirection.clone(); // Direction that hit the surface
+                currentDirection.reflect(worldNormal); // currentDirection is now the reflected vector
+
+                console.log(`Laser ${laserIndex}, Bounce ${i}: Incoming for Reflection:`, incomingForReflection.x, incomingForReflection.y, incomingForReflection.z);
+                console.log(`Laser ${laserIndex}, Bounce ${i}: Reflected Direction:`, currentDirection.x, currentDirection.y, currentDirection.z);
+
                 currentOrigin.copy(impactPoint).add(currentDirection.clone().multiplyScalar(0.001));
 
                 if (i === MAX_BOUNCES - 1) {
