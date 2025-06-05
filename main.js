@@ -347,8 +347,6 @@ function animate() {
     }
 
     if (model) { // Check if the model is loaded
-        model.rotation.x += rotationSpeed * deltaTime;
-        model.rotation.y += rotationSpeed * deltaTime;
     }
 
     updateLaser(); // Call the new laser update function
