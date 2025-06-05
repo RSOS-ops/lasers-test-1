@@ -61,7 +61,8 @@ function adjustCameraForModel() {
     const modelHeight = size.y;
     const fovInRadians = THREE.MathUtils.degToRad(camera.fov);
     let cameraZ = (modelHeight / 2) / Math.tan(fovInRadians / 2);
-    cameraZ *= 2; // Double the distance to make the model appear half the size
+    cameraZ *= 2; // Original adjustment for 50% canvas height
+    cameraZ *= 2; // Further adjustment to make it 50% smaller than current
     camera.position.set(0, 0, cameraZ);
 
     // Update controls target to look at the model's new origin (0,0,0)
