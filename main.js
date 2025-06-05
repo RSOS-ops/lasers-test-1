@@ -37,6 +37,10 @@ directionalLightTarget.position.set(0, 0, 0);
 scene.add(directionalLightTarget);
 directionalLight.target = directionalLightTarget;
 
+// Optional: Add a helper to visualize the DirectionalLight.
+const directionalLightHelper = new THREE.DirectionalLightHelper(directionalLight, 2); // Using a size of 2 for the helper
+scene.add(directionalLightHelper);
+
 const spotLight = new THREE.SpotLight(0xffffff, 100);
 spotLight.distance = 3;
 spotLight.angle = Math.PI / 8; // Adjusted for potentially different model size
@@ -158,6 +162,10 @@ gltfLoader.load(
 
         spotLight.target = spotLightTargetObject;
         model.add(spotLight);
+
+        // Optional: Add a helper to visualize the original SpotLight.
+        const originalSpotLightHelper = new THREE.SpotLightHelper(spotLight);
+        scene.add(originalSpotLightHelper);
 
         // Configure and attach the New SpotLight to the model
         const newSpotLightTargetObject = new THREE.Object3D();
