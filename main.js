@@ -42,6 +42,45 @@ function init() {
         function (gltf) {
             model = gltf.scene;
             model.position.set(0, 0, 0);
+
+            // --- Start of new scaling logic ---
+            // Ensure the camera's projection matrix is up to date for calculations
+            camera.updateMatrixWorld(); // Important for getting correct world positions/orientations
+            camera.updateProjectionMatrix();
+
+            // Calculate the model's bounding box and size
+            const box = new THREE.Box3().setFromObject(model);
+            const size = new THREE.Vector3();
+            box.getSize(size);
+
+            // Calculate visible height and width at the model's Z position (0)
+            // The camera is at camera.position.set(20, 20, 50);
+            // The target is (0,0,0)
+            // The effective Z distance for FOV calculation to the Z=0 plane is camera.position.z
+            const distanceToModelPlane = Math.abs(camera.position.z - model.position.z); // Should be 50 if model at z=0
+
+            const vFOV = THREE.MathUtils.degToRad(camera.fov); // camera.fov is in degrees
+            const heightAtDepth = 2 * Math.tan(vFOV / 2) * distanceToModelPlane;
+            const widthAtDepth = heightAtDepth * camera.aspect;
+
+            // Target model width: 50% of the calculated visible screen width
+            const targetModelWidth = widthAtDepth * 0.5;
+
+            // Calculate scale factor (uniform scaling based on width)
+            let scale = 1;
+            if (size.x > 0) {
+                scale = targetModelWidth / size.x;
+            } else if (size.y > 0) { // Fallback to height if width is 0
+                const targetModelHeight = heightAtDepth * 0.5; // Assuming 50% of height as well
+                scale = targetModelHeight / size.y;
+            } else if (size.z > 0) { // Fallback to depth if width and height are 0
+                // Using widthAtDepth for Z is not ideal, but as a last resort scale based on depth
+                scale = (widthAtDepth * 0.25) / size.z; // Scaled to 25% of width for depth
+            }
+
+            model.scale.set(scale, scale, scale);
+            // --- End of new scaling logic ---
+
             scene.add(model);
             animate(); // Start animation loop after model is loaded
         },
