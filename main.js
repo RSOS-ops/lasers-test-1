@@ -47,19 +47,12 @@ spotLight.decay = 2;
 let model;
 
 // Laser Global Variables
-// let laserLine; // Commented out for multiple lasers
-// const laserOrigin = new THREE.Vector3(-10, 1, 0); // Commented out for multiple lasers
-// const initialLaserDirection = new THREE.Vector3(1, 0, 0).normalize(); // Commented out for multiple lasers
-
-const interactiveObjects = []; // To store objects the laser can hit - Shared by all lasers
-const MAX_LASER_LENGTH = 20; // Max length if no hit - Shared
-const MAX_BOUNCES = 3; // Reverted from 1
-const FAR_AWAY_DISTANCE = 1000; // For extending final laser segments
-
-const laserConfigs = [];
-const LASER_COLORS = [0xff0000, 0x00ff00, 0x0000ff, 0xff00ff]; // Red, Green, Blue, Purple (Magenta)
-
-// Removed getScreenCornerInWorld function
+let laserLine;
+const laserOrigin = new THREE.Vector3(-10, 1, 0); // Example starting point
+const initialLaserDirection = new THREE.Vector3(1, 0, 0).normalize(); // Example initial direction
+const interactiveObjects = []; // To store objects the laser can hit
+const MAX_LASER_LENGTH = 20; // Max length if no hit
+const MAX_BOUNCES = 3; // Max number of laser bounces
 
 function adjustCameraForModel() {
     if (!model) return;
@@ -93,27 +86,19 @@ function adjustCameraForModel() {
 const gltfLoader = new GLTFLoader();
 const modelUrl = 'https://raw.githubusercontent.com/RSOS-ops/lasers-test-1/main/cube-beveled-silver.glb';
 
-// Removed SCREEN_CORNERS constant
+// Laser Line Setup
+const laserMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 }); // Red laser
+const points = [];
+points.push(laserOrigin.clone());
+points.push(laserOrigin.clone().add(initialLaserDirection.clone().multiplyScalar(MAX_LASER_LENGTH))); // Initial straight line
+const laserGeometry = new THREE.BufferGeometry().setFromPoints(points);
+laserLine = new THREE.Line(laserGeometry, laserMaterial);
+scene.add(laserLine);
 
 gltfLoader.load(
     modelUrl,
     (gltf) => {
         model = gltf.scene;
-
-        model.traverse((child) => {
-            if (child.isMesh && child.material) {
-                // If material is an array (MultiMaterial)
-                if (Array.isArray(child.material)) {
-                    child.material.forEach(mat => {
-                        mat.side = THREE.DoubleSide;
-                        mat.needsUpdate = true;
-                    });
-                } else { // Single material
-                    child.material.side = THREE.DoubleSide;
-                    child.material.needsUpdate = true;
-                }
-            }
-        });
 
         // Configure and attach the SpotLight to the model
         const spotLightTargetObject = new THREE.Object3D();
@@ -123,43 +108,9 @@ gltfLoader.load(
         spotLight.target = spotLightTargetObject;
         model.add(spotLight);
 
-        // Model centering and scene addition (assuming this was already here or intended)
-        const box = new THREE.Box3().setFromObject(model);
-        const center = box.getCenter(new THREE.Vector3());
-        model.position.sub(center);
-        scene.add(model); // Ensure model is added to scene after potential repositioning
-
         interactiveObjects.push(model); // Add model for laser interaction
-        // console.log('Model added to interactiveObjects:', model); // Removed
-        // console.log('Model children:', model.children); // Removed
 
-        adjustCameraForModel(); // Camera is now set relative to the model
-
-        // >>> START OF MODIFIED LASER INITIALIZATION BLOCK <<<
-        console.log("Starting laser initialization (camera-based origins)...");
-
-        // Loop 4 times (or based on LASER_COLORS.length)
-        for (let i = 0; i < LASER_COLORS.length; i++) {
-            const laserColor = LASER_COLORS[i];
-            const laserMaterial = new THREE.LineBasicMaterial({ color: laserColor });
-
-            // Placeholder geometry - will be updated in the first frame
-            const initialPoints = [new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,1)];
-            const laserGeometry = new THREE.BufferGeometry().setFromPoints(initialPoints);
-            const line = new THREE.Line(laserGeometry, laserMaterial);
-            scene.add(line);
-
-            laserConfigs.push({
-                line: line,
-                origin: new THREE.Vector3(), // Placeholder, will be updated each frame
-                direction: new THREE.Vector3(), // Placeholder, will be updated each frame
-                color: laserColor
-            });
-            // console.log(`Laser ${i} structure initialized.`); // Optional: can be kept or removed
-        }
-        console.log("Laser structures initialization complete. Total lasers:", laserConfigs.length);
-        // >>> END OF MODIFIED LASER INITIALIZATION BLOCK <<<
-
+        adjustCameraForModel(); // Call this after model is processed
     },
     (xhr) => {
         console.log((xhr.loaded / xhr.total * 100) + '% loaded');
@@ -170,84 +121,46 @@ gltfLoader.load(
 );
 
 // Laser Update Function
-function updateLasers() {    // New function
-    if (model) {
-        model.updateMatrixWorld(true); // Force update of model's and its children's world matrices
-    }
+function updateLaser() {
+    const raycaster = new THREE.Raycaster();
+    const points = [];
 
-    const cameraRight = new THREE.Vector3();
-    camera.getWorldDirection(new THREE.Vector3()); // Ensure matrixWorld is up to date for camera.
-    cameraRight.setFromMatrixColumn(camera.matrixWorld, 0); // Column 0 is the X-axis (right)
-    cameraRight.normalize(); // Ensure it's a unit vector
+    let currentOrigin = laserOrigin.clone();
+    let currentDirection = initialLaserDirection.clone();
 
-    const raycaster = new THREE.Raycaster(); // Can still be one raycaster reused
+    points.push(currentOrigin.clone());
 
-    let targetPosition;
-    if (model && model.position) { // Check if model is loaded and has a position
-        targetPosition = model.position.clone();
-    } else {
-        targetPosition = new THREE.Vector3(0, 0, 0); // Default target if model not ready
-    }
+    for (let i = 0; i < MAX_BOUNCES; i++) {
+        raycaster.set(currentOrigin, currentDirection);
+        const intersects = raycaster.intersectObjects(interactiveObjects, true);
 
-    laserConfigs.forEach((config, laserIndex) => { // Added laserIndex directly
-        const separation = 0.01; // New, much smaller value
-        const numLasers = LASER_COLORS.length;
-        const offsetAmount = (laserIndex - (numLasers - 1) / 2) * separation;
+        if (intersects.length > 0) {
+            const intersection = intersects[0];
+            const impactPoint = intersection.point;
+            points.push(impactPoint.clone());
 
-        const laserOriginOffset = cameraRight.clone().multiplyScalar(offsetAmount);
-        const currentLaserOrigin = camera.position.clone().add(laserOriginOffset);
+            const surfaceNormal = intersection.face.normal.clone();
+            const worldNormal = new THREE.Vector3();
+            worldNormal.copy(surfaceNormal).transformDirection(intersection.object.matrixWorld);
 
-        // config.origin is no longer used from laserConfigs for path calculation starting point
-        // config.direction is no longer used from laserConfigs for path calculation starting point
-
-        let currentDirection = new THREE.Vector3().subVectors(targetPosition, currentLaserOrigin).normalize();
-
-        console.log(`Laser ${laserIndex} - Frame Start: Dynamic Origin: (${currentLaserOrigin.x.toFixed(2)}, ${currentLaserOrigin.y.toFixed(2)}, ${currentLaserOrigin.z.toFixed(2)}), Dynamic Direction: (${currentDirection.x.toFixed(2)}, ${currentDirection.y.toFixed(2)}, ${currentDirection.z.toFixed(2)})`);
-
-        const points = [];
-        points.push(currentLaserOrigin.clone());
-
-        // Initialize loop variables with the dynamic origin/direction
-        let loopOrigin = currentLaserOrigin.clone();
-        let loopDirection = currentDirection.clone();
-
-        for (let i = 0; i < MAX_BOUNCES; i++) {
-            raycaster.set(loopOrigin, loopDirection);
-
-            if (interactiveObjects.length === 0) {
-                 if (i === 0) points.push(loopOrigin.clone().add(loopDirection.clone().multiplyScalar(MAX_LASER_LENGTH))); // Use MAX_LASER_LENGTH for initial segment if no objects
-                break;
+            if (currentDirection.dot(worldNormal) > 0) {
+                worldNormal.negate();
             }
-            const intersects = raycaster.intersectObjects(interactiveObjects, true);
 
-            if (intersects.length > 0) {
-                const intersection = intersects[0];
-                const impactPoint = intersection.point;
-                points.push(impactPoint.clone());
+            currentDirection.reflect(worldNormal);
+            currentOrigin.copy(impactPoint).add(currentDirection.clone().multiplyScalar(0.001)); // Offset for next ray
 
-                const surfaceNormal = intersection.face.normal.clone();
-                const worldNormal = new THREE.Vector3();
-                worldNormal.copy(surfaceNormal).transformDirection(intersection.object.matrixWorld);
-
-                if (loopDirection.dot(worldNormal) > 0) {
-                    worldNormal.negate();
-                }
-
-                loopDirection.reflect(worldNormal);
-                loopOrigin.copy(impactPoint).add(loopDirection.clone().multiplyScalar(0.001));
-
-                if (i === MAX_BOUNCES - 1) {
-                    points.push(loopOrigin.clone().add(loopDirection.clone().multiplyScalar(FAR_AWAY_DISTANCE)));
-                }
-            } else {
-                points.push(loopOrigin.clone().add(loopDirection.clone().multiplyScalar(FAR_AWAY_DISTANCE)));
-                break;
+            if (i === MAX_BOUNCES - 1) { // If it's the last bounce, draw the final segment
+                points.push(currentOrigin.clone().add(currentDirection.clone().multiplyScalar(MAX_LASER_LENGTH)));
             }
+        } else {
+            points.push(currentOrigin.clone().add(currentDirection.clone().multiplyScalar(MAX_LASER_LENGTH)));
+            break;
         }
+    }
 
-        config.line.geometry.setFromPoints(points);
-        config.line.geometry.attributes.position.needsUpdate = true;
-    });
+    laserLine.geometry.setFromPoints(points);
+    laserLine.geometry.attributes.position.needsUpdate = true;
 }
 
 const rotationSpeed = (2 * Math.PI) / 12; // Radians per second
@@ -266,7 +179,7 @@ function animate() {
         model.rotation.y += rotationSpeed * deltaTime;
     }
 
-    updateLasers(); // New call
+    updateLaser(); // Call the new laser update function
 
     renderer.render(scene, camera);
 }
