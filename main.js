@@ -92,7 +92,6 @@ function adjustCameraForModel() {
     const fovInRadians = THREE.MathUtils.degToRad(camera.fov);
     let cameraZ = (modelHeight / 2) / Math.tan(fovInRadians / 2);
     cameraZ *= 2; // Original adjustment for 50% canvas height
-    cameraZ *= 2; // Further adjustment to make it 50% smaller than current
     camera.position.set(0, 0, cameraZ);
 
     // Update controls target to look at the model's new origin (0,0,0)
@@ -103,7 +102,7 @@ function adjustCameraForModel() {
 }
 
 const gltfLoader = new GLTFLoader();
-const modelUrl = 'https://raw.githubusercontent.com/RSOS-ops/lasers-test-1/main/cube-beveled-silver.glb';
+const modelUrl = 'https://raw.githubusercontent.com/RSOS-ops/lasers-test-1/feat/add-second-red-laser/HoodedCory_NewHood_Darker.DecimatedFace.glb';
 
 // Laser Line Setup
 const laserMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 }); // Red laser
