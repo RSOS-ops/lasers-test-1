@@ -10,10 +10,11 @@ let scene, camera, renderer;
 let textMesh;
 let model; // For GLTF model
 const textContent = 'Cory Richard';
-const fontName = 'Roboto'; // Should match the font loaded in index.html
-const fontWeight = 'Regular'; // or 'Bold' etc. if you chose a specific weight
+// const fontName = 'Roboto'; // Should match the font loaded in index.html // Not used
+// const fontWeight = 'Regular'; // or 'Bold' etc. if you chose a specific weight // Not used
 
-function init() {
+// Group Three.js setup
+function setupThreeJS() {
     // Scene
     scene = new THREE.Scene();
 
@@ -26,6 +27,18 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
     document.getElementById('text-container').appendChild(renderer.domElement);
+
+    // Directional Light
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0); // White light, intensity 1
+    directionalLight.position.set(10, 10, 10); // Position: up, right, and in front of the origin
+    directionalLight.target.position.set(0, 0, 0); // Target the origin (where the model is)
+
+    scene.add(directionalLight);
+    scene.add(directionalLight.target); // Important to add the target to the scene as well
+}
+
+function init() {
+    setupThreeJS();
 
     // Instantiate GLTFLoader
     const loader = new THREE.GLTFLoader();
@@ -42,20 +55,17 @@ function init() {
         undefined, // onProgress callback
         function (error) {
             console.error('An error happened while loading the GLTF model:', error);
+            // Fallback: Display simple HTML text if model loading fails
+            const container = document.getElementById('text-container');
+            if (container && !container.querySelector('p')) { // Avoid overwriting font fallback
+                container.innerHTML = `<p style="color: white; font-size: 2vw; text-align: center; margin-top: 40vh;">Failed to load 3D model. Please try refreshing.</p>`;
+            }
         }
     );
 
     // Load Font
     const fontLoader = new THREE.FontLoader();
-    const fontPath = 'https://threejs.org/examples/fonts/helvetiker_regular.typeface.json'; // Placeholder, will load Roboto
-
-    // Directional Light
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0); // White light, intensity 1
-    directionalLight.position.set(10, 10, 10); // Position: up, right, and in front of the origin
-    directionalLight.target.position.set(0, 0, 0); // Target the origin (where the model is)
-
-    scene.add(directionalLight);
-    scene.add(directionalLight.target); // Important to add the target to the scene as well
+    // const fontPath = 'https://threejs.org/examples/fonts/helvetiker_regular.typeface.json'; // Placeholder, will load Roboto // Not used
 
     fontLoader.load(
         // THREE.js examples use specific JSON font files.
@@ -74,8 +84,13 @@ function init() {
             console.error('Error loading font:', error);
             // Fallback: Display simple HTML text if font loading fails
             const container = document.getElementById('text-container');
-            container.innerHTML = `<p style="color: white; font-size: 5vw; text-align: center; margin-top: 40vh;">${textContent}</p>`;
-            container.style.fontFamily = 'Roboto, sans-serif';
+            // Avoid overwriting the model loading error message if it was already displayed
+            if (container && !container.querySelector('p')) {
+                container.innerHTML = `<p style="color: white; font-size: 5vw; text-align: center; margin-top: 40vh;">${textContent}</p>`;
+                container.style.fontFamily = 'Roboto, sans-serif'; // Ensure this matches your desired fallback font
+            }
+            // Call animate even if font loading fails, to render the scene (e.g. the model)
+            animate();
         }
     );
 
@@ -84,99 +99,125 @@ function init() {
 }
 
 function createText(font) {
+    // Create text geometry
     const textGeometry = new THREE.TextGeometry(textContent, {
         font: font,
-        size: 10, // Initial size, will be scaled
-        height: 0.1, // Minimal height to keep it "flat"
+        size: 10,       // Initial size, will be scaled by scaleAndPositionText
+        height: 0.1,    // Minimal height to keep it "flat"
         curveSegments: 12,
         bevelEnabled: false
     });
 
+    // Center the geometry. This is important for rotation and scaling around the center.
+    textGeometry.center();
+
+    // Pre-compute bounding box. center() should do this, but explicit call ensures it.
     textGeometry.computeBoundingBox();
+
+    // Create material for the text
     const textMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFFFF }); // White
+
+    // Create the mesh
     textMesh = new THREE.Mesh(textGeometry, textMaterial);
 
-    // Scale and position text
-    scaleAndPositionText(font); // Pass font to allow recreation with centering
-
+    // Add to scene before scaling and positioning,
+    // as scaleAndPositionText might rely on camera properties relative to the scene.
     scene.add(textMesh);
+
+    // Initial scale and position calculation
+    scaleAndPositionText(); // No longer needs font parameter
 }
 
-function scaleAndPositionText(font) { // Added font parameter
-    if (!textMesh && !font) return; // Ensure font is available if textMesh needs recreation
-
-    // Camera and scene setup for scaling calculation
-    camera.updateProjectionMatrix();
-    // textMesh.position.z = 0; // Text is placed at z=0 by default after new TextGeometry and centering.
-    // The camera.position.z is taken from its current setting (e.g., 50 from init())
-
-    const distance = camera.position.z - (textMesh.position.z || 0); // textMesh.position.z should be 0 here
-    const visibleHeight = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * distance;
-    const visibleWidth = visibleHeight * camera.aspect;
-    const desiredTextScreenWidth = visibleWidth * 0.6; // New trial value, make text smaller
-
-    // Re-create text geometry for centering and proper scaling
-    // This ensures that scaling is applied correctly after centering.
-    if (font) { // Only recreate if font is passed (e.g., during init or if needed on resize)
-        scene.remove(textMesh); // Remove old mesh
-
-        const newTextGeometry = new THREE.TextGeometry(textContent, {
-            font: font,
-            size: 10, // Base size, will be scaled
-            height: 0.01, // Very flat
-            curveSegments: 12,
-            bevelEnabled: false
-        });
-        newTextGeometry.center(); // Center the geometry
-
-        // Use the existing material or create a new one if it wasn't created yet
-        const material = textMesh ? textMesh.material : new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
-        textMesh = new THREE.Mesh(newTextGeometry, material);
-        scene.add(textMesh); // Add new mesh to scene
+// Scales and positions the existing textMesh.
+// This function assumes textMesh has already been created and its geometry is centered.
+function scaleAndPositionText() {
+    // Ensure essential components are ready.
+    if (!textMesh || !textMesh.geometry || !camera) {
+        console.warn('scaleAndPositionText: textMesh, its geometry, or camera not ready. Skipping.');
+        return;
     }
 
+    // Update camera projection matrix for accurate calculations.
+    camera.updateProjectionMatrix();
 
-    // Ensure the bounding box is up to date for the current geometry
-    textMesh.geometry.computeBoundingBox();
+    // Calculate the visible height and width at the Z-depth of the text.
+    // The text is at z=0 relative to its parent (which is the scene).
+    // The camera's Z position determines the distance.
+    const distance = camera.position.z - textMesh.position.z; // textMesh.position.z is 0 because it's centered and placed at origin initially
+
+    // Calculate visible height in world units at the text's distance
+    const visibleHeight = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * distance;
+    // Calculate visible width based on camera's aspect ratio
+    const visibleWidth = visibleHeight * camera.aspect;
+
+    // Set the desired screen width for the text (e.g., 60% of visible width).
+    const desiredTextScreenWidth = visibleWidth * 0.6;
+
+    // Ensure the bounding box is up to date for the current geometry.
+    // textGeometry.center() also calls computeBoundingBox, but if geometry somehow changed, this would be a safeguard.
+    // However, since we are not re-creating geometry here, this might be redundant if createText ensures it.
+    // For safety, it's kept, but could be removed if performance profiling shows it's an issue.
+    if (!textMesh.geometry.boundingBox) {
+        textMesh.geometry.computeBoundingBox();
+    }
     const boundingBox = textMesh.geometry.boundingBox;
+
+    // If boundingBox is null (e.g., empty geometry or error), exit.
+    if (!boundingBox) {
+        console.warn('scaleAndPositionText: boundingBox is null. Skipping scaling.');
+        return;
+    }
+
+    // Get the current width of the text from its bounding box.
     const currentTextWidth = boundingBox.max.x - boundingBox.min.x;
 
+    // Calculate and apply scale.
     if (currentTextWidth > 0) {
         const scale = desiredTextScreenWidth / currentTextWidth;
-        textMesh.scale.set(scale, scale, scale); // Uniform scaling for simplicity, adjust Z scale if depth is an issue
+        textMesh.scale.set(scale, scale, scale); // Uniform scaling
+    } else {
+        // If currentTextWidth is 0 (e.g., empty text string or issue with bounding box),
+        // set a default scale to avoid division by zero or NaN scales.
+        textMesh.scale.set(1, 1, 1);
     }
 
-    // Position the centered and scaled mesh
-    // Move text up by 25% of visible height from the center of the screen.
+    // Position the text.
+    // We want to move the text up by 25% of the visible height from the center of the screen.
+    // Since the text geometry is centered, its local origin (0,0,0) is its visual center.
+    // Positioning it at (0, verticalOffset, 0) in world space achieves the desired layout.
     const verticalOffset = visibleHeight * 0.25;
-    textMesh.position.set(0, verticalOffset, 0); // X=0 due to geometry centering, Z=0 for flatness
+    textMesh.position.set(0, verticalOffset, 0); // X=0 (centered), Y=offset, Z=0 (at scene origin plane)
 }
 
 
 function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    if (camera && renderer) { // Ensure camera and renderer are initialized
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
 
-    // Re-calculate scale and position on resize to maintain 80% width
-    // Pass the font loaded during init to allow re-creation of text geometry
-    if (textMesh && textMesh.geometry.parameters.options.font) {
-        scaleAndPositionText(textMesh.geometry.parameters.options.font);
+        // Re-calculate scale and position on resize.
+        // textMesh is scaled and positioned based on the new window dimensions.
+        if (textMesh) { // Ensure textMesh exists before trying to scale/position it
+            scaleAndPositionText(); // No longer needs font parameter
+        }
     }
 }
 
 function animate() {
     requestAnimationFrame(animate);
-    renderer.render(scene, camera);
+    // Ensure scene and camera are ready before rendering
+    if (scene && camera && renderer) {
+        renderer.render(scene, camera);
+    }
 }
 
 // Start the application after the DOM is fully loaded
-document.addEventListener('DOMContentLoaded', (event) => {
+document.addEventListener('DOMContentLoaded', () => { // Removed event parameter as it's not used
     if (typeof THREE.GLTFLoader === 'function') {
         init();
     } else {
         console.error('THREE.GLTFLoader is not available. Check script loading order and availability.');
-        // Optionally, provide a user-friendly message on the page
         const container = document.getElementById('text-container');
         if (container) {
             container.innerHTML = '<p style="color: white; font-size: 2vw; text-align: center; margin-top: 40vh;">Error: Could not load essential 3D components. Please try refreshing.</p>';
