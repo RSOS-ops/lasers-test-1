@@ -85,6 +85,8 @@ let previousMousePosition = {
     y: 0
 };
 const modelRotationSpeed = 0.005;
+let currentRotationVelocity = new THREE.Vector2(0, 0); // Using THREE.Vector2 for convenience
+const rotationDampingFactor = 0.95;
 
 function adjustCameraForModel() {
     if (!model) return;
@@ -373,7 +375,29 @@ function animate() {
     const deltaTime = clock.getDelta(); // Get time elapsed since last frame
     requestAnimationFrame(animate);
 
-    if (model) { // Check if the model is loaded
+    if (model) { // Ensure model is loaded
+        // Inertial rotation and damping
+        if (!isDragging) { // Only apply inertia if not currently dragging
+            const velocityThreshold = 0.0001; // Small threshold to stop movement
+            if (Math.abs(currentRotationVelocity.x) > velocityThreshold || Math.abs(currentRotationVelocity.y) > velocityThreshold) {
+                // Rotation around the world Y axis based on horizontal mouse movement velocity
+                const deltaQuaternionY = new THREE.Quaternion();
+                deltaQuaternionY.setFromAxisAngle(new THREE.Vector3(0, 1, 0), currentRotationVelocity.y); // Note: currentRotationVelocity.y is from deltaX
+
+                // Rotation around the world X axis based on vertical mouse movement velocity
+                const deltaQuaternionX = new THREE.Quaternion();
+                deltaQuaternionX.setFromAxisAngle(new THREE.Vector3(1, 0, 0), currentRotationVelocity.x); // Note: currentRotationVelocity.x is from deltaY
+
+                model.quaternion.premultiply(deltaQuaternionY);
+                model.quaternion.premultiply(deltaQuaternionX);
+
+                currentRotationVelocity.x *= rotationDampingFactor;
+                currentRotationVelocity.y *= rotationDampingFactor;
+            } else {
+                // If velocities are below threshold, stop them completely
+                currentRotationVelocity.set(0, 0);
+            }
+        }
     }
 
     updateLaser(); // Call the new laser update function
@@ -400,6 +424,7 @@ renderer.domElement.addEventListener('mousedown', (event) => {
     isDragging = true;
     previousMousePosition.x = event.clientX;
     previousMousePosition.y = event.clientY;
+    currentRotationVelocity.set(0, 0);
 });
 
 renderer.domElement.addEventListener('mousemove', (event) => {
@@ -407,21 +432,11 @@ renderer.domElement.addEventListener('mousemove', (event) => {
         const deltaX = event.clientX - previousMousePosition.x;
         const deltaY = event.clientY - previousMousePosition.y;
 
-        // Rotation around the world Y axis based on horizontal mouse movement
-        const deltaQuaternionY = new THREE.Quaternion();
-        // Axis is (0,1,0) for Y; angle is deltaX scaled by rotationSpeed
-        deltaQuaternionY.setFromAxisAngle(new THREE.Vector3(0, 1, 0), deltaX * modelRotationSpeed);
-
-        // Rotation around the world X axis based on vertical mouse movement
-        const deltaQuaternionX = new THREE.Quaternion();
-        // Axis is (1,0,0) for X; angle is deltaY scaled by rotationSpeed
-        deltaQuaternionX.setFromAxisAngle(new THREE.Vector3(1, 0, 0), deltaY * modelRotationSpeed);
-
-        // Apply the rotations to the model's quaternion.
-        // Pre-multiply applies the rotation relative to the world coordinate system.
-        // The order of Y then X is a common choice, but can be swapped to change the feel.
-        model.quaternion.premultiply(deltaQuaternionY);
-        model.quaternion.premultiply(deltaQuaternionX);
+        // Update rotation velocity based on mouse delta
+        // deltaY (vertical mouse movement) contributes to rotation around X-axis
+        currentRotationVelocity.x = deltaY * modelRotationSpeed;
+        // deltaX (horizontal mouse movement) contributes to rotation around Y-axis
+        currentRotationVelocity.y = deltaX * modelRotationSpeed;
 
         previousMousePosition.x = event.clientX;
         previousMousePosition.y = event.clientY;
