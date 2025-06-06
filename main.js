@@ -38,20 +38,20 @@ scene.add(directionalLightTarget);
 directionalLight.target = directionalLightTarget;
 
 // Optional: Add a helper to visualize the DirectionalLight.
-const directionalLightHelper = new THREE.DirectionalLightHelper(directionalLight, 2); // Using a size of 2 for the helper
+const directionalLightHelper = new THREE.DirectionalLightHelper(directionalLight, 0); // Using a size of 2 for the helper
 scene.add(directionalLightHelper);
 
-const spotLightDown = new THREE.SpotLight(0xffffff, 100);
-spotLightDown.distance = 3;
+const spotLightDown = new THREE.SpotLight(0xffffff, 50);
+spotLightDown.distance = 1; // Adjusted for potentially different model size
 spotLightDown.angle = Math.PI / 8; // Adjusted for potentially different model size
 spotLightDown.penumbra = 0.5;
 spotLightDown.decay = 2;
 
 const spotLightFace = new THREE.SpotLight();
 spotLightFace.color.set(0xffffff);
-spotLightFace.intensity = 27;
-spotLightFace.distance = 0.5;
-spotLightFace.angle = Math.PI / 8;
+spotLightFace.intensity = 50; // Adjusted intensity for the face spotlight GOOD VALUE IS 150 // spookyvalue 
+spotLightFace.distance = 0.85;
+spotLightFace.angle = Math.PI / 11.5;
 spotLightFace.penumbra = 0.5;
 spotLightFace.decay = 0.5;
 
@@ -115,7 +115,7 @@ function adjustCameraForModel() {
 }
 
 const gltfLoader = new GLTFLoader();
-const modelUrl = 'https://raw.githubusercontent.com/RSOS-ops/lasers-test-1/feat/add-second-red-laser/HoodedCory_NewHood_Darker.DecimatedFace.glb';
+const modelUrl = 'HoodedCory_NewStart_NewHood_DecimatedCreasedHood-1.glb';
 
 // Laser Line Setup
 const laserMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 }); // Red laser
@@ -170,12 +170,12 @@ gltfLoader.load(
         // Configure and attach the New SpotLight to the model
         const spotLightFaceTargetObject = new THREE.Object3D();
         model.add(spotLightFaceTargetObject); // Add target as a child of the model.
-        spotLightFaceTargetObject.position.set(0, 0.13, 0.1); // Target position relative to the model.
+        spotLightFaceTargetObject.position.set(0, 0.4, 0.0); // Target position relative to the model.
 
         spotLightFace.target = spotLightFaceTargetObject; // Aim the new spotlight at this target.
         model.add(spotLightFace); // Add the new spotlight itself as a child of the model.
         // Position the new spotlight relative to the model's local coordinates.
-        spotLightFace.position.set(0, -0.25, 0.2);
+        spotLightFace.position.set(0, -0.6, 0.5);
 
         // Optional: Add a helper to visualize the New SpotLight.
         const spotLightFaceHelper = new THREE.SpotLightHelper(spotLightFace);
