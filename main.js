@@ -7,8 +7,8 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
 
-// Helper Functions for Lasers
-function getRandomPointOnSphere(center, radius) {
+// Helper Functions for rave-laser-system-1
+function getRandomPointOnRaveLaserSystem1OriginSphere(center, radius) {
     const point = new THREE.Vector3(
         Math.random() * 2 - 1, // x in [-1, 1]
         Math.random() * 2 - 1, // y in [-1, 1]
@@ -21,9 +21,9 @@ function getRandomPointOnSphere(center, radius) {
     return point;
 }
 
-function getRandomVertex(verticesArray) {
+function getRandomRaveLaserSystem1TargetVertex(verticesArray) {
     if (!verticesArray || verticesArray.length === 0) {
-        console.warn("getRandomVertex: modelVertices array is empty or undefined. Returning default Vector3(0,0,0).");
+        console.warn("getRandomRaveLaserSystem1TargetVertex: modelVertices array is empty or undefined. Returning default Vector3(0,0,0).");
         return new THREE.Vector3(); // Default target if no vertices
     }
     const randomIndex = Math.floor(Math.random() * verticesArray.length);
@@ -34,19 +34,19 @@ function getRandomVertex(verticesArray) {
 const clock = new THREE.Clock();
 
 // --- Configuration Parameters ---
-const INVISIBLE_SPHERE_RADIUS = 10; // Radius for the invisible sphere where lasers originate
+const RAVE_LASER_SYSTEM_1_ORIGIN_SPHERE_RADIUS = 10; // Radius for the invisible sphere where rave-laser-system-1 originate
 const CAMERA_ROTATION_THRESHOLD = THREE.MathUtils.degToRad(15); // Min camera rotation (radians) to be considered 'significant movement'
 const CAMERA_POSITION_THRESHOLD = 0.1; // Min camera position change (world units) for 'significant movement'
-const STILLNESS_LIMIT = 3.0; // Duration (seconds) camera must be 'still' to trigger laser jump
+const RAVE_LASER_SYSTEM_1_STILLNESS_LIMIT = 3.0; // Duration (seconds) camera must be 'still' to trigger rave-laser-system-1 jump
 
-const BASE_PULSE_FREQUENCY = 0.5; // Base laser pulse frequency (cycles per second) when camera is still
-const PULSE_FREQUENCY_SENSITIVITY = 5.0; // How much camera movement speed influences pulse frequency
-const MIN_LASER_BRIGHTNESS = 0.3; // Minimum brightness for pulsing laser material (range 0-1)
-const MAX_LASER_BRIGHTNESS = 1.0; // Maximum brightness for pulsing laser material (range 0-1)
+const BASE_RAVE_LASER_SYSTEM_1_PULSE_FREQUENCY = 0.5; // Base rave-laser-system-1 pulse frequency (cycles per second) when camera is still
+const RAVE_LASER_SYSTEM_1_PULSE_FREQUENCY_SENSITIVITY = 5.0; // How much camera movement speed influences pulse frequency
+const MIN_RAVE_LASER_SYSTEM_1_BRIGHTNESS = 0.3; // Minimum brightness for pulsing rave-laser-system-1 material (range 0-1)
+const MAX_RAVE_LASER_SYSTEM_1_BRIGHTNESS = 1.0; // Maximum brightness for pulsing rave-laser-system-1 material (range 0-1)
 
-// General Laser Properties
-const MAX_LASER_LENGTH = 20; // Max length of a laser beam segment if it doesn't hit anything
-const MAX_BOUNCES = 3; // Max number of times a laser can bounce
+// General rave-laser-system-1 Properties
+const MAX_RAVE_LASER_SYSTEM_1_LENGTH = 20; // Max length of a rave-laser-system-1 beam segment if it doesn't hit anything
+const MAX_BOUNCES = 3; // Max number of times a rave-laser-system-1 can bounce
 // --- End Configuration Parameters ---
 
 // Camera Movement Tracking State
@@ -54,8 +54,8 @@ let previousCameraPosition = new THREE.Vector3(); // Stores camera position from
 let previousCameraQuaternion = new THREE.Quaternion(); // Stores camera orientation from the previous frame
 let stillnessTimer = 0; // Accumulates time camera has been still
 
-// Raycaster for Lasers
-const laserRaycaster = new THREE.Raycaster();
+// Raycaster for rave-laser-system-1
+const raveLaserSystem1Raycaster = new THREE.Raycaster();
 
 // Camera Setup
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -106,44 +106,44 @@ spotLightFace.decay = 0.5;
 let model;
 let modelVertices = []; // To store world coordinates of model vertices
 
-// Laser Global Variables
+// rave-laser-system-1 Global Variables
 // const laserOffset1 = new THREE.Vector3(-0.8, 0.8, -1); // Top-left - REMOVED
 // const laserOffset2 = new THREE.Vector3(0.8, 0.8, -1);  // Top-right - REMOVED
 // const laserOffset3 = new THREE.Vector3(-0.8, -0.8, -1);// Bottom-left - REMOVED
 // const laserOffset4 = new THREE.Vector3(0.8, -0.8, -1); // Bottom-right - REMOVED
 
 // Laser 1
-let laserLine; // THREE.Line object
-let laserOrigin1; // THREE.Vector3 - Current origin of the laser
-let initialLaserDirection1; // THREE.Vector3 - Current direction of the laser
-let laserTargetVertex1; // THREE.Vector3 - Target vertex on the model
-let laserPulseIntensity1 = 1.0; // Current pulse intensity (0-1)
+let raveLaserSystem1Line; // THREE.Line object
+let raveLaserSystem1Origin1; // THREE.Vector3 - Current origin of the laser
+let raveLaserSystem1InitialDirection1; // THREE.Vector3 - Current direction of the laser
+let raveLaserSystem1TargetVertex1; // THREE.Vector3 - Target vertex on the model
+let raveLaserSystem1PulseIntensity1 = 1.0; // Current pulse intensity (0-1)
 
-// Laser 2
-let laserLine2;
-let laserOrigin2;
-let initialLaserDirection2;
-let laserTargetVertex2;
-let laserPulseIntensity2 = 1.0;
-const laserMaterial2 = new THREE.LineBasicMaterial({ color: 0xff0000 }); // Red laser for the second laser
+// rave-laser-system-1 2
+let raveLaserSystem1Line2;
+let raveLaserSystem1Origin2;
+let raveLaserSystem1InitialDirection2;
+let raveLaserSystem1TargetVertex2;
+let raveLaserSystem1PulseIntensity2 = 1.0;
+const raveLaserSystem1Material2 = new THREE.LineBasicMaterial({ color: 0xff0000 }); // Red rave-laser-system-1 for the second rave-laser-system-1
 
-// Laser 3
-let laserLine3;
-let laserOrigin3;
-let initialLaserDirection3;
-let laserTargetVertex3;
-let laserPulseIntensity3 = 1.0;
-const laserMaterial3 = new THREE.LineBasicMaterial({ color: 0xff0000 }); // Red laser for the third laser
+// rave-laser-system-1 3
+let raveLaserSystem1Line3;
+let raveLaserSystem1Origin3;
+let raveLaserSystem1InitialDirection3;
+let raveLaserSystem1TargetVertex3;
+let raveLaserSystem1PulseIntensity3 = 1.0;
+const raveLaserSystem1Material3 = new THREE.LineBasicMaterial({ color: 0xff0000 }); // Red rave-laser-system-1 for the third rave-laser-system-1
 
-// Laser 4
-let laserLine4;
-let laserOrigin4;
-let initialLaserDirection4;
-let laserTargetVertex4;
-let laserPulseIntensity4 = 1.0;
-const laserMaterial4 = new THREE.LineBasicMaterial({ color: 0xff0000 }); // Red laser for the fourth laser
+// rave-laser-system-1 4
+let raveLaserSystem1Line4;
+let raveLaserSystem1Origin4;
+let raveLaserSystem1InitialDirection4;
+let raveLaserSystem1TargetVertex4;
+let raveLaserSystem1PulseIntensity4 = 1.0;
+const raveLaserSystem1Material4 = new THREE.LineBasicMaterial({ color: 0xff0000 }); // Red rave-laser-system-1 for the fourth rave-laser-system-1
 
-const interactiveObjects = []; // To store objects the laser can hit (currently just the model)
+const interactiveObjects = []; // To store objects the rave-laser-system-1 can hit (currently just the model)
 
 function adjustCameraForModel() {
     if (!model) return;
@@ -177,38 +177,38 @@ function adjustCameraForModel() {
 const gltfLoader = new GLTFLoader();
 const modelUrl = 'HoodedCory_NewStart_NewHood_DecimatedCreasedHood-1.glb';
 
-// Laser Line Setup
-const laserMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 }); // Red laser
+// rave-laser-system-1 Line Setup
+const raveLaserSystem1Material = new THREE.LineBasicMaterial({ color: 0xff0000 }); // Red rave-laser-system-1
 const points = [];
 // points.push(laserOrigin.clone()); // laserOrigin will be undefined here
 // points.push(laserOrigin.clone().add(initialLaserDirection.clone().multiplyScalar(MAX_LASER_LENGTH))); // Initial straight line
-const laserGeometry = new THREE.BufferGeometry().setFromPoints(points);
-laserLine = new THREE.Line(laserGeometry, laserMaterial);
-scene.add(laserLine);
+const raveLaserSystem1Geometry = new THREE.BufferGeometry().setFromPoints(points);
+raveLaserSystem1Line = new THREE.Line(raveLaserSystem1Geometry, raveLaserSystem1Material);
+scene.add(raveLaserSystem1Line);
 
-// Second Laser Line Setup
+// Second rave-laser-system-1 Line Setup
 const points2 = [];
 // points2.push(laserOrigin2.clone()); // laserOrigin2 will be undefined here
 // points2.push(laserOrigin2.clone().add(initialLaserDirection2.clone().multiplyScalar(MAX_LASER_LENGTH)));
-const laserGeometry2 = new THREE.BufferGeometry().setFromPoints(points2);
-laserLine2 = new THREE.Line(laserGeometry2, laserMaterial2);
-scene.add(laserLine2);
+const raveLaserSystem1Geometry2 = new THREE.BufferGeometry().setFromPoints(points2);
+raveLaserSystem1Line2 = new THREE.Line(raveLaserSystem1Geometry2, raveLaserSystem1Material2);
+scene.add(raveLaserSystem1Line2);
 
-// Third Laser Line Setup
+// Third rave-laser-system-1 Line Setup
 const points3 = [];
 // points3.push(laserOrigin3.clone()); // laserOrigin3 will be undefined here
 // points3.push(laserOrigin3.clone().add(initialLaserDirection3.clone().multiplyScalar(MAX_LASER_LENGTH)));
-const laserGeometry3 = new THREE.BufferGeometry().setFromPoints(points3);
-laserLine3 = new THREE.Line(laserGeometry3, laserMaterial3);
-scene.add(laserLine3);
+const raveLaserSystem1Geometry3 = new THREE.BufferGeometry().setFromPoints(points3);
+raveLaserSystem1Line3 = new THREE.Line(raveLaserSystem1Geometry3, raveLaserSystem1Material3);
+scene.add(raveLaserSystem1Line3);
 
-// Fourth Laser Line Setup
+// Fourth rave-laser-system-1 Line Setup
 const points4 = [];
 // points4.push(laserOrigin4.clone()); // laserOrigin4 will be undefined here
 // points4.push(laserOrigin4.clone().add(initialLaserDirection4.clone().multiplyScalar(MAX_LASER_LENGTH)));
-const laserGeometry4 = new THREE.BufferGeometry().setFromPoints(points4);
-laserLine4 = new THREE.Line(laserGeometry4, laserMaterial4);
-scene.add(laserLine4);
+const raveLaserSystem1Geometry4 = new THREE.BufferGeometry().setFromPoints(points4);
+raveLaserSystem1Line4 = new THREE.Line(raveLaserSystem1Geometry4, raveLaserSystem1Material4);
+scene.add(raveLaserSystem1Line4);
 
 gltfLoader.load(
     modelUrl,
@@ -241,7 +241,7 @@ gltfLoader.load(
         const spotLightFaceHelper = new THREE.SpotLightHelper(spotLightFace);
         scene.add(spotLightFaceHelper);
 
-        interactiveObjects.push(model); // Add model for laser interaction
+        interactiveObjects.push(model); // Add model for rave-laser-system-1 interaction
 
         adjustCameraForModel(); // Call this after model is processed
 
@@ -260,7 +260,7 @@ gltfLoader.load(
         });
         console.log('Extracted ' + modelVertices.length + ' vertices from the model.');
 
-        initializeLasers(); // Initialize lasers now that model vertices are available
+        initializeLasers(); // Initialize rave-laser-system-1 now that model vertices are available
     },
     (xhr) => {
         console.log((xhr.loaded / xhr.total * 100) + '% loaded');
@@ -272,56 +272,56 @@ gltfLoader.load(
 
 function initializeLasers() {
     if (modelVertices.length === 0) {
-        console.warn("initializeLasers called before model vertices were extracted. Lasers will use default initialization.");
+        console.warn("initializeLasers called before model vertices were extracted. rave-laser-system-1 will use default initialization.");
         // Default initialization if vertices aren't ready
-        laserOrigin1 = new THREE.Vector3(0,0,INVISIBLE_SPHERE_RADIUS); // Assign to laserOrigin1
-        laserTargetVertex1 = new THREE.Vector3();
+        raveLaserSystem1Origin1 = new THREE.Vector3(0,0,RAVE_LASER_SYSTEM_1_ORIGIN_SPHERE_RADIUS); // Assign to raveLaserSystem1Origin1
+        raveLaserSystem1TargetVertex1 = new THREE.Vector3();
 
-        laserOrigin2 = new THREE.Vector3(0,0,INVISIBLE_SPHERE_RADIUS);
-        laserTargetVertex2 = new THREE.Vector3();
+        raveLaserSystem1Origin2 = new THREE.Vector3(0,0,RAVE_LASER_SYSTEM_1_ORIGIN_SPHERE_RADIUS);
+        raveLaserSystem1TargetVertex2 = new THREE.Vector3();
 
-        laserOrigin3 = new THREE.Vector3(0,0,INVISIBLE_SPHERE_RADIUS);
-        laserTargetVertex3 = new THREE.Vector3();
+        raveLaserSystem1Origin3 = new THREE.Vector3(0,0,RAVE_LASER_SYSTEM_1_ORIGIN_SPHERE_RADIUS);
+        raveLaserSystem1TargetVertex3 = new THREE.Vector3();
 
-        laserOrigin4 = new THREE.Vector3(0,0,INVISIBLE_SPHERE_RADIUS);
-        laserTargetVertex4 = new THREE.Vector3();
+        raveLaserSystem1Origin4 = new THREE.Vector3(0,0,RAVE_LASER_SYSTEM_1_ORIGIN_SPHERE_RADIUS);
+        raveLaserSystem1TargetVertex4 = new THREE.Vector3();
 
     } else {
-        // Laser 1
-        laserOrigin1 = getRandomPointOnSphere(controls.target, INVISIBLE_SPHERE_RADIUS);
-        laserTargetVertex1 = getRandomVertex(modelVertices);
+        // rave-laser-system-1 1
+        raveLaserSystem1Origin1 = getRandomPointOnRaveLaserSystem1OriginSphere(controls.target, RAVE_LASER_SYSTEM_1_ORIGIN_SPHERE_RADIUS);
+        raveLaserSystem1TargetVertex1 = getRandomRaveLaserSystem1TargetVertex(modelVertices);
 
-        // Laser 2
-        laserOrigin2 = getRandomPointOnSphere(controls.target, INVISIBLE_SPHERE_RADIUS);
-        laserTargetVertex2 = getRandomVertex(modelVertices);
+        // rave-laser-system-1 2
+        raveLaserSystem1Origin2 = getRandomPointOnRaveLaserSystem1OriginSphere(controls.target, RAVE_LASER_SYSTEM_1_ORIGIN_SPHERE_RADIUS);
+        raveLaserSystem1TargetVertex2 = getRandomRaveLaserSystem1TargetVertex(modelVertices);
 
-        // Laser 3
-        laserOrigin3 = getRandomPointOnSphere(controls.target, INVISIBLE_SPHERE_RADIUS);
-        laserTargetVertex3 = getRandomVertex(modelVertices);
+        // rave-laser-system-1 3
+        raveLaserSystem1Origin3 = getRandomPointOnRaveLaserSystem1OriginSphere(controls.target, RAVE_LASER_SYSTEM_1_ORIGIN_SPHERE_RADIUS);
+        raveLaserSystem1TargetVertex3 = getRandomRaveLaserSystem1TargetVertex(modelVertices);
 
-        // Laser 4
-        laserOrigin4 = getRandomPointOnSphere(controls.target, INVISIBLE_SPHERE_RADIUS);
-        laserTargetVertex4 = getRandomVertex(modelVertices);
+        // rave-laser-system-1 4
+        raveLaserSystem1Origin4 = getRandomPointOnRaveLaserSystem1OriginSphere(controls.target, RAVE_LASER_SYSTEM_1_ORIGIN_SPHERE_RADIUS);
+        raveLaserSystem1TargetVertex4 = getRandomRaveLaserSystem1TargetVertex(modelVertices);
     }
 
-    // Common for all lasers, calculate initial directions
-    if (laserOrigin1 && laserTargetVertex1) initialLaserDirection1 = new THREE.Vector3().subVectors(laserTargetVertex1, laserOrigin1).normalize(); // Use laserOrigin1
-    else initialLaserDirection1 = new THREE.Vector3(0,0,-1);
+    // Common for all rave-laser-system-1, calculate initial directions
+    if (raveLaserSystem1Origin1 && raveLaserSystem1TargetVertex1) raveLaserSystem1InitialDirection1 = new THREE.Vector3().subVectors(raveLaserSystem1TargetVertex1, raveLaserSystem1Origin1).normalize(); // Use raveLaserSystem1Origin1
+    else raveLaserSystem1InitialDirection1 = new THREE.Vector3(0,0,-1);
 
-    if (laserOrigin2 && laserTargetVertex2) initialLaserDirection2 = new THREE.Vector3().subVectors(laserTargetVertex2, laserOrigin2).normalize();
-    else initialLaserDirection2 = new THREE.Vector3(0,0,-1);
+    if (raveLaserSystem1Origin2 && raveLaserSystem1TargetVertex2) raveLaserSystem1InitialDirection2 = new THREE.Vector3().subVectors(raveLaserSystem1TargetVertex2, raveLaserSystem1Origin2).normalize();
+    else raveLaserSystem1InitialDirection2 = new THREE.Vector3(0,0,-1);
 
-    if (laserOrigin3 && laserTargetVertex3) initialLaserDirection3 = new THREE.Vector3().subVectors(laserTargetVertex3, laserOrigin3).normalize();
-    else initialLaserDirection3 = new THREE.Vector3(0,0,-1);
+    if (raveLaserSystem1Origin3 && raveLaserSystem1TargetVertex3) raveLaserSystem1InitialDirection3 = new THREE.Vector3().subVectors(raveLaserSystem1TargetVertex3, raveLaserSystem1Origin3).normalize();
+    else raveLaserSystem1InitialDirection3 = new THREE.Vector3(0,0,-1);
 
-    if (laserOrigin4 && laserTargetVertex4) initialLaserDirection4 = new THREE.Vector3().subVectors(laserTargetVertex4, laserOrigin4).normalize();
-    else initialLaserDirection4 = new THREE.Vector3(0,0,-1);
+    if (raveLaserSystem1Origin4 && raveLaserSystem1TargetVertex4) raveLaserSystem1InitialDirection4 = new THREE.Vector3().subVectors(raveLaserSystem1TargetVertex4, raveLaserSystem1Origin4).normalize();
+    else raveLaserSystem1InitialDirection4 = new THREE.Vector3(0,0,-1);
 
-    console.log("Lasers initialized.");
+    console.log("rave-laser-system-1 initialized.");
 }
 
-// Reusable Laser Update Function
-function updateLaserLineGeometry(laserLineObj, origin, direction, raycaster, interactiveObjectsArr, maxBounces, maxLaserLength) {
+// Reusable rave-laser-system-1 Update Function
+function updateLaserLineGeometry(laserLineObj, origin, direction, raycaster, interactiveObjectsArr, maxBounces, raveLaserSystem1MaxLaserLength) {
     const points = [];
     let currentOrigin = origin.clone();
     let currentDirection = direction.clone();
@@ -349,10 +349,10 @@ function updateLaserLineGeometry(laserLineObj, origin, direction, raycaster, int
             currentOrigin.copy(impactPoint).add(currentDirection.clone().multiplyScalar(0.001)); // Offset for next ray
 
             if (i === maxBounces - 1) { // If it's the last bounce, draw the final segment
-                points.push(currentOrigin.clone().add(currentDirection.clone().multiplyScalar(maxLaserLength)));
+                points.push(currentOrigin.clone().add(currentDirection.clone().multiplyScalar(raveLaserSystem1MaxLaserLength)));
             }
         } else {
-            points.push(currentOrigin.clone().add(currentDirection.clone().multiplyScalar(maxLaserLength)));
+            points.push(currentOrigin.clone().add(currentDirection.clone().multiplyScalar(raveLaserSystem1MaxLaserLength)));
             break;
         }
     }
@@ -371,42 +371,42 @@ function handleLaserJumpLogic() {
         return;
     }
 
-    // console.log("Lasers are JUMPING!"); // For debugging
+    // console.log("rave-laser-system-1 are JUMPING!"); // For debugging
 
-    // Laser 1
-    laserOrigin1 = getRandomPointOnSphere(controls.target, INVISIBLE_SPHERE_RADIUS);
-    laserTargetVertex1 = getRandomVertex(modelVertices);
-    if (laserOrigin1 && laserTargetVertex1 && initialLaserDirection1) { // Ensure all are valid before calculating direction
-         initialLaserDirection1.subVectors(laserTargetVertex1, laserOrigin1).normalize();
-    } else if (initialLaserDirection1) { // Fallback if origin/target somehow invalid but direction vector exists
-        initialLaserDirection1.set(0,0,-1); // Default direction
+    // rave-laser-system-1 1
+    raveLaserSystem1Origin1 = getRandomPointOnRaveLaserSystem1OriginSphere(controls.target, RAVE_LASER_SYSTEM_1_ORIGIN_SPHERE_RADIUS);
+    raveLaserSystem1TargetVertex1 = getRandomRaveLaserSystem1TargetVertex(modelVertices);
+    if (raveLaserSystem1Origin1 && raveLaserSystem1TargetVertex1 && raveLaserSystem1InitialDirection1) { // Ensure all are valid before calculating direction
+         raveLaserSystem1InitialDirection1.subVectors(raveLaserSystem1TargetVertex1, raveLaserSystem1Origin1).normalize();
+    } else if (raveLaserSystem1InitialDirection1) { // Fallback if origin/target somehow invalid but direction vector exists
+        raveLaserSystem1InitialDirection1.set(0,0,-1); // Default direction
     }
 
-    // Laser 2
-    laserOrigin2 = getRandomPointOnSphere(controls.target, INVISIBLE_SPHERE_RADIUS);
-    laserTargetVertex2 = getRandomVertex(modelVertices);
-    if (laserOrigin2 && laserTargetVertex2 && initialLaserDirection2) {
-        initialLaserDirection2.subVectors(laserTargetVertex2, laserOrigin2).normalize();
-    } else if (initialLaserDirection2) {
-        initialLaserDirection2.set(0,0,-1);
+    // rave-laser-system-1 2
+    raveLaserSystem1Origin2 = getRandomPointOnRaveLaserSystem1OriginSphere(controls.target, RAVE_LASER_SYSTEM_1_ORIGIN_SPHERE_RADIUS);
+    raveLaserSystem1TargetVertex2 = getRandomRaveLaserSystem1TargetVertex(modelVertices);
+    if (raveLaserSystem1Origin2 && raveLaserSystem1TargetVertex2 && raveLaserSystem1InitialDirection2) {
+        raveLaserSystem1InitialDirection2.subVectors(raveLaserSystem1TargetVertex2, raveLaserSystem1Origin2).normalize();
+    } else if (raveLaserSystem1InitialDirection2) {
+        raveLaserSystem1InitialDirection2.set(0,0,-1);
     }
 
-    // Laser 3
-    laserOrigin3 = getRandomPointOnSphere(controls.target, INVISIBLE_SPHERE_RADIUS);
-    laserTargetVertex3 = getRandomVertex(modelVertices);
-    if (laserOrigin3 && laserTargetVertex3 && initialLaserDirection3) {
-        initialLaserDirection3.subVectors(laserTargetVertex3, laserOrigin3).normalize();
-    } else if (initialLaserDirection3) {
-        initialLaserDirection3.set(0,0,-1);
+    // rave-laser-system-1 3
+    raveLaserSystem1Origin3 = getRandomPointOnRaveLaserSystem1OriginSphere(controls.target, RAVE_LASER_SYSTEM_1_ORIGIN_SPHERE_RADIUS);
+    raveLaserSystem1TargetVertex3 = getRandomRaveLaserSystem1TargetVertex(modelVertices);
+    if (raveLaserSystem1Origin3 && raveLaserSystem1TargetVertex3 && raveLaserSystem1InitialDirection3) {
+        raveLaserSystem1InitialDirection3.subVectors(raveLaserSystem1TargetVertex3, raveLaserSystem1Origin3).normalize();
+    } else if (raveLaserSystem1InitialDirection3) {
+        raveLaserSystem1InitialDirection3.set(0,0,-1);
     }
 
-    // Laser 4
-    laserOrigin4 = getRandomPointOnSphere(controls.target, INVISIBLE_SPHERE_RADIUS);
-    laserTargetVertex4 = getRandomVertex(modelVertices);
-    if (laserOrigin4 && laserTargetVertex4 && initialLaserDirection4) {
-        initialLaserDirection4.subVectors(laserTargetVertex4, laserOrigin4).normalize();
-    } else if (initialLaserDirection4) {
-        initialLaserDirection4.set(0,0,-1);
+    // rave-laser-system-1 4
+    raveLaserSystem1Origin4 = getRandomPointOnRaveLaserSystem1OriginSphere(controls.target, RAVE_LASER_SYSTEM_1_ORIGIN_SPHERE_RADIUS);
+    raveLaserSystem1TargetVertex4 = getRandomRaveLaserSystem1TargetVertex(modelVertices);
+    if (raveLaserSystem1Origin4 && raveLaserSystem1TargetVertex4 && raveLaserSystem1InitialDirection4) {
+        raveLaserSystem1InitialDirection4.subVectors(raveLaserSystem1TargetVertex4, raveLaserSystem1Origin4).normalize();
+    } else if (raveLaserSystem1InitialDirection4) {
+        raveLaserSystem1InitialDirection4.set(0,0,-1);
     }
 }
 
@@ -442,7 +442,7 @@ function animate() {
             // console.log("Camera moved significantly: Rotation or Position delta exceeded threshold.");
         } else {
             stillnessTimer += deltaTime;
-            if (stillnessTimer >= STILLNESS_LIMIT) {
+            if (stillnessTimer >= RAVE_LASER_SYSTEM_1_STILLNESS_LIMIT) {
                 stillnessTimer = 0; // Reset timer
                 hasCameraMovedSignificantly = true; // Trigger jump due to stillness
                 // console.log("Stillness limit reached, triggering jump.");
@@ -467,39 +467,39 @@ function animate() {
     if (model) { // Check if the model is loaded
     }
 
-    // Camera-parenting logic for laser origins - REMOVED
+    // Camera-parenting logic for rave-laser-system-1 origins - REMOVED
     // const worldLaserOrigin1 = new THREE.Vector3();
     // worldLaserOrigin1.copy(laserOffset1);
     // worldLaserOrigin1.applyMatrix4(camera.matrixWorld);
-    // laserOrigin = worldLaserOrigin1;
+    // raveLaserSystem1Origin1 = worldLaserOrigin1;
     //
     // const worldLaserOrigin2 = new THREE.Vector3();
     // worldLaserOrigin2.copy(laserOffset2);
     // worldLaserOrigin2.applyMatrix4(camera.matrixWorld);
-    // laserOrigin2 = worldLaserOrigin2;
+    // raveLaserSystem1Origin2 = worldLaserOrigin2;
     //
     // const worldLaserOrigin3 = new THREE.Vector3();
     // worldLaserOrigin3.copy(laserOffset3);
     // worldLaserOrigin3.applyMatrix4(camera.matrixWorld);
-    // laserOrigin3 = worldLaserOrigin3;
+    // raveLaserSystem1Origin3 = worldLaserOrigin3;
     //
     // const worldLaserOrigin4 = new THREE.Vector3();
     // worldLaserOrigin4.copy(laserOffset4);
     // worldLaserOrigin4.applyMatrix4(camera.matrixWorld);
-    // laserOrigin4 = worldLaserOrigin4;
+    // raveLaserSystem1Origin4 = worldLaserOrigin4;
 
-    // Update laser directions to point from new origins to control target
+    // Update rave-laser-system-1 directions to point from new origins to control target
     // This will be updated in the next step based on new origin calculation method
     // For now, direction calculation is handled by initializeLasers and handleLaserJumpLogic
-    // if (laserOrigin && controls.target) { // Temporary check
+    // if (raveLaserSystem1Origin1 && controls.target) { // Temporary check
     //     const direction1 = new THREE.Vector3();
-    //     direction1.subVectors(controls.target, laserOrigin).normalize();
-    //     initialLaserDirection = direction1;
+    //     direction1.subVectors(controls.target, raveLaserSystem1Origin1).normalize();
+    //     raveLaserSystem1InitialDirection1 = direction1;
     // }
-    // ... (similar for other lasers) ...
+    // ... (similar for other rave-laser-system-1) ...
 
 
-    // Laser Pulsing Logic
+    // rave-laser-system-1 Pulsing Logic
     // Note: deltaPosition and deltaRotation are available from the camera tracking logic block above
     let cameraSpeed = 0;
     if (deltaTime > 0) { // deltaTime is from clock.getDelta() at the start of animate()
@@ -509,45 +509,45 @@ function animate() {
     // Clamp cameraSpeed to prevent excessively fast pulsing, e.g., on first frame or after a lag spike
     cameraSpeed = Math.min(cameraSpeed, 10.0);
 
-    const currentPulseFrequency = BASE_PULSE_FREQUENCY + (cameraSpeed * PULSE_FREQUENCY_SENSITIVITY);
+    const currentPulseFrequency = BASE_RAVE_LASER_SYSTEM_1_PULSE_FREQUENCY + (cameraSpeed * RAVE_LASER_SYSTEM_1_PULSE_FREQUENCY_SENSITIVITY);
 
-    // Calculate a single pulse intensity to be used by all lasers for synchronization
+    // Calculate a single pulse intensity to be used by all rave-laser-system-1 for synchronization
     const sharedPulseIntensity = (Math.sin(clock.elapsedTime * currentPulseFrequency * Math.PI * 2) + 1) / 2; // Results in range [0, 1]
 
-    // Assign to individual laser pulse intensities (can be used for other effects if needed)
-    laserPulseIntensity1 = sharedPulseIntensity;
-    laserPulseIntensity2 = sharedPulseIntensity;
-    laserPulseIntensity3 = sharedPulseIntensity;
-    laserPulseIntensity4 = sharedPulseIntensity;
+    // Assign to individual rave-laser-system-1 pulse intensities (can be used for other effects if needed)
+    raveLaserSystem1PulseIntensity1 = sharedPulseIntensity;
+    raveLaserSystem1PulseIntensity2 = sharedPulseIntensity;
+    raveLaserSystem1PulseIntensity3 = sharedPulseIntensity;
+    raveLaserSystem1PulseIntensity4 = sharedPulseIntensity;
 
-    // Apply pulsing to laser materials by modulating color brightness
-    const brightnessScalar = MIN_LASER_BRIGHTNESS + (sharedPulseIntensity * (MAX_LASER_BRIGHTNESS - MIN_LASER_BRIGHTNESS));
+    // Apply pulsing to rave-laser-system-1 materials by modulating color brightness
+    const brightnessScalar = MIN_RAVE_LASER_SYSTEM_1_BRIGHTNESS + (sharedPulseIntensity * (MAX_RAVE_LASER_SYSTEM_1_BRIGHTNESS - MIN_RAVE_LASER_SYSTEM_1_BRIGHTNESS));
 
-    if (laserLine.material) {
-        laserLine.material.color.setHex(0xff0000).multiplyScalar(brightnessScalar);
+    if (raveLaserSystem1Line.material) {
+        raveLaserSystem1Line.material.color.setHex(0xff0000).multiplyScalar(brightnessScalar);
     }
-    if (laserLine2.material) {
-        laserLine2.material.color.setHex(0xff0000).multiplyScalar(brightnessScalar);
+    if (raveLaserSystem1Line2.material) {
+        raveLaserSystem1Line2.material.color.setHex(0xff0000).multiplyScalar(brightnessScalar);
     }
-    if (laserLine3.material) {
-        laserLine3.material.color.setHex(0xff0000).multiplyScalar(brightnessScalar);
+    if (raveLaserSystem1Line3.material) {
+        raveLaserSystem1Line3.material.color.setHex(0xff0000).multiplyScalar(brightnessScalar);
     }
-    if (laserLine4.material) {
-        laserLine4.material.color.setHex(0xff0000).multiplyScalar(brightnessScalar);
+    if (raveLaserSystem1Line4.material) {
+        raveLaserSystem1Line4.material.color.setHex(0xff0000).multiplyScalar(brightnessScalar);
     }
 
-    // Update all laser lines using the new reusable function
-    if (laserOrigin1 && initialLaserDirection1) { // Ensure origin and direction are calculated for laser 1
-        updateLaserLineGeometry(laserLine, laserOrigin1, initialLaserDirection1, laserRaycaster, interactiveObjects, MAX_BOUNCES, MAX_LASER_LENGTH);
+    // Update all rave-laser-system-1 lines using the new reusable function
+    if (raveLaserSystem1Origin1 && raveLaserSystem1InitialDirection1) { // Ensure origin and direction are calculated for rave-laser-system-1 1
+        updateLaserLineGeometry(raveLaserSystem1Line, raveLaserSystem1Origin1, raveLaserSystem1InitialDirection1, raveLaserSystem1Raycaster, interactiveObjects, MAX_BOUNCES, MAX_RAVE_LASER_SYSTEM_1_LENGTH);
     }
-    if (laserOrigin2 && initialLaserDirection2) {
-        updateLaserLineGeometry(laserLine2, laserOrigin2, initialLaserDirection2, laserRaycaster, interactiveObjects, MAX_BOUNCES, MAX_LASER_LENGTH);
+    if (raveLaserSystem1Origin2 && raveLaserSystem1InitialDirection2) {
+        updateLaserLineGeometry(raveLaserSystem1Line2, raveLaserSystem1Origin2, raveLaserSystem1InitialDirection2, raveLaserSystem1Raycaster, interactiveObjects, MAX_BOUNCES, MAX_RAVE_LASER_SYSTEM_1_LENGTH);
     }
-    if (laserOrigin3 && initialLaserDirection3) {
-        updateLaserLineGeometry(laserLine3, laserOrigin3, initialLaserDirection3, laserRaycaster, interactiveObjects, MAX_BOUNCES, MAX_LASER_LENGTH);
+    if (raveLaserSystem1Origin3 && raveLaserSystem1InitialDirection3) {
+        updateLaserLineGeometry(raveLaserSystem1Line3, raveLaserSystem1Origin3, raveLaserSystem1InitialDirection3, raveLaserSystem1Raycaster, interactiveObjects, MAX_BOUNCES, MAX_RAVE_LASER_SYSTEM_1_LENGTH);
     }
-    if (laserOrigin4 && initialLaserDirection4) {
-        updateLaserLineGeometry(laserLine4, laserOrigin4, initialLaserDirection4, laserRaycaster, interactiveObjects, MAX_BOUNCES, MAX_LASER_LENGTH);
+    if (raveLaserSystem1Origin4 && raveLaserSystem1InitialDirection4) {
+        updateLaserLineGeometry(raveLaserSystem1Line4, raveLaserSystem1Origin4, raveLaserSystem1InitialDirection4, raveLaserSystem1Raycaster, interactiveObjects, MAX_BOUNCES, MAX_RAVE_LASER_SYSTEM_1_LENGTH);
     }
 
     renderer.render(scene, camera);
