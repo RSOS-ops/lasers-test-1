@@ -3,6 +3,21 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
+// Directional Light Laser Helper
+let directionalLightLaserHelper; // Will be THREE.Line object
+
+// SpotLight Down Laser Helper
+let spotLightDownLaserHelperLines = []; // Array of THREE.Line objects for cone
+let spotLightDownLaserHelperCircle; // THREE.Line object for cone base
+
+// SpotLight Face Laser Helper
+let spotLightFaceLaserHelperLines = []; // Array of THREE.Line objects for cone
+let spotLightFaceLaserHelperCircle; // THREE.Line object for cone base
+
+// updateDirectionalLightLaserHelper function will be defined further down,
+// but the variable is global.
+// updateSpotLightLaserHelper will also be defined further down.
+
 // Scene Setup
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
@@ -29,6 +44,122 @@ function getRandomVertex(verticesArray) {
     const randomIndex = Math.floor(Math.random() * verticesArray.length);
     return verticesArray[randomIndex].clone(); // Return a clone to avoid modifying original
 }
+
+// Update function for the Directional Light's laser visual
+function updateDirectionalLightLaserHelper() {
+    if (!directionalLightLaserHelper || !directionalLight || !directionalLight.target) return;
+
+    // Ensure the target's world matrix is up to date to get the correct world position
+    directionalLight.target.updateMatrixWorld(true);
+
+    const startPoint = directionalLight.position.clone();
+    const targetPosition = new THREE.Vector3(); // Create a new vector to store the world position
+    directionalLight.target.getWorldPosition(targetPosition); // Get world position of the target
+
+    const direction = new THREE.Vector3().subVectors(targetPosition, startPoint).normalize();
+
+    // If start and target are effectively the same (e.g. target is at light's origin, or not set properly)
+    // provide a default direction to avoid issues. Let's point it along negative Y as a fallback.
+    if (direction.lengthSq() < 0.0001) { // Using a small epsilon for floating point comparison
+        direction.set(0, -1, 0);
+    }
+
+    const endPoint = new THREE.Vector3().addVectors(startPoint, direction.multiplyScalar(MAX_LASER_LENGTH / 2));
+
+    directionalLightLaserHelper.geometry.setFromPoints([startPoint, endPoint]);
+    directionalLightLaserHelper.geometry.attributes.position.needsUpdate = true;
+}
+
+// Update function for a SpotLight's laser visual (cone and circle)
+const NUM_CONE_LINES = 4; // Number of lines to represent the spotlight cone
+const CIRCLE_SEGMENTS = 32; // Number of segments for the cone base circle
+
+function updateSpotLightLaserHelper(spotlight, linesArray, circleLine) {
+    if (!spotlight || !spotlight.target || !linesArray || !circleLine) return;
+    if (linesArray.some(line => !line) || !circleLine) return; // Ensure all line objects exist
+
+    // Ensure spotlight and its target's world matrices are up to date
+    spotlight.updateMatrixWorld(true);
+    spotlight.target.updateMatrixWorld(true);
+
+    const spotlightPosition = new THREE.Vector3();
+    spotlight.getWorldPosition(spotlightPosition);
+
+    const targetPosition = new THREE.Vector3();
+    spotlight.target.getWorldPosition(targetPosition);
+
+    const direction = new THREE.Vector3().subVectors(targetPosition, spotlightPosition).normalize();
+    if (direction.lengthSq() < 0.0001) { // Fallback if direction is zero
+        direction.set(0, -1, 0); // Default to pointing downwards
+        // Try to use the spotlight's parent's negative Z-axis if available and not zero
+        if (spotlight.parent && spotlight.parent.matrixWorld) {
+            const parentZ = new THREE.Vector3().setFromMatrixColumn(spotlight.parent.matrixWorld, 2);
+            if (parentZ.lengthSq() > 0.0001) {
+                direction.copy(parentZ).negate();
+            }
+        }
+    }
+
+
+    const coneRadius = Math.tan(spotlight.angle) * spotlight.distance;
+    const coneBaseCenter = new THREE.Vector3().addVectors(spotlightPosition, direction.clone().multiplyScalar(spotlight.distance));
+
+    // Determine a consistent "up" vector, try to avoid being parallel to spotlight direction
+    let upVector = new THREE.Vector3(0, 1, 0);
+    if (Math.abs(direction.y) > 0.99) { // If direction is close to Y axis
+        upVector.set(1, 0, 0); // Use X axis instead
+    }
+
+    const perpendicularVector = new THREE.Vector3().crossVectors(direction, upVector).normalize();
+    if (perpendicularVector.lengthSq() < 0.0001) { // If upVector was parallel to direction
+        // Fallback: try crossing with Z axis
+        upVector.set(0,0,1);
+        if (Math.abs(direction.z) > 0.99) { // If direction is close to Z axis
+             upVector.set(1,0,0); // Use X axis
+        }
+        perpendicularVector.crossVectors(direction, upVector).normalize();
+         if (perpendicularVector.lengthSq() < 0.0001) { // If still failing
+            perpendicularVector.set(1,0,0); // Absolute fallback
+            // Attempt to make it perpendicular to direction if direction is not (1,0,0)
+            if(Math.abs(direction.x) < 0.99) {
+                 perpendicularVector.set(-direction.y, direction.x, 0).normalize();
+            } else { // if direction is (1,0,0) or (-1,0,0)
+                 perpendicularVector.set(0,1,0);
+            }
+             if (perpendicularVector.lengthSq() < 0.0001) perpendicularVector.set(0,0,1); // Final fallback
+        }
+    }
+
+
+    // Update Cone Lines
+    for (let i = 0; i < linesArray.length; i++) {
+        if (!linesArray[i]) continue;
+        const angle = (i / linesArray.length) * Math.PI * 2;
+        const pointOnCircumference = perpendicularVector.clone()
+            .applyAxisAngle(direction, angle)
+            .multiplyScalar(coneRadius)
+            .add(coneBaseCenter);
+
+        linesArray[i].geometry.setFromPoints([spotlightPosition, pointOnCircumference]);
+        linesArray[i].geometry.attributes.position.needsUpdate = true;
+    }
+
+    // Update Circle Line
+    if (circleLine) {
+        const circlePoints = [];
+        for (let i = 0; i <= CIRCLE_SEGMENTS; i++) { // Use <= to close the loop
+            const angle = (i / CIRCLE_SEGMENTS) * Math.PI * 2;
+            const pointOnCircumference = perpendicularVector.clone()
+                .applyAxisAngle(direction, angle)
+                .multiplyScalar(coneRadius)
+                .add(coneBaseCenter);
+            circlePoints.push(pointOnCircumference);
+        }
+        circleLine.geometry.setFromPoints(circlePoints);
+        circleLine.geometry.attributes.position.needsUpdate = true;
+    }
+}
+
 
 // Clock for animation timing
 const clock = new THREE.Clock();
@@ -70,6 +201,7 @@ let controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 0, 0);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
+controls.enabled = false;
 
 // Lighting Setup
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
@@ -83,10 +215,25 @@ const directionalLightTarget = new THREE.Object3D();
 directionalLightTarget.position.set(0, 0, 0);
 scene.add(directionalLightTarget);
 directionalLight.target = directionalLightTarget;
+// Ensure the target's world matrix is initially up-to-date.
+directionalLight.target.updateMatrixWorld(true);
+
+// Create and add the Directional Light Laser Helper
+const dirLaserMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
+// Initialize with two dummy points; they will be updated immediately.
+const dirLaserPoints = [new THREE.Vector3(0,0,0), new THREE.Vector3(0,1,0)];
+const dirLaserGeometry = new THREE.BufferGeometry().setFromPoints(dirLaserPoints);
+directionalLightLaserHelper = new THREE.Line(dirLaserGeometry, dirLaserMaterial);
+scene.add(directionalLightLaserHelper);
+
+// Call the update function once to set the correct initial position/direction
+if (typeof updateDirectionalLightLaserHelper === 'function') {
+    updateDirectionalLightLaserHelper();
+}
 
 // Optional: Add a helper to visualize the DirectionalLight.
 const directionalLightHelper = new THREE.DirectionalLightHelper(directionalLight, 0); // Using a size of 2 for the helper
-scene.add(directionalLightHelper);
+// scene.add(directionalLightHelper);
 
 const spotLightDown = new THREE.SpotLight(0xffffff, 50);
 spotLightDown.distance = 1; // Adjusted for potentially different model size
@@ -222,10 +369,29 @@ gltfLoader.load(
 
         spotLightDown.target = spotLightDownTargetObject;
         model.add(spotLightDown);
+        spotLightDown.target.updateMatrixWorld(true); // Ensure target's matrix is updated
+        spotLightDown.updateMatrixWorld(true); // Ensure spotlight's matrix is updated for helper init
+
+        // Initialize laser visual for spotLightDown
+        const spotLightLaserMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
+        spotLightDownLaserHelperLines = []; // Clear in case of re-load or multiple calls
+        for (let i = 0; i < NUM_CONE_LINES; i++) {
+            const geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+            const line = new THREE.Line(geometry, spotLightLaserMaterial);
+            spotLightDownLaserHelperLines.push(line);
+            scene.add(line); // Add to scene, though it will be parented to the model by spotlight logic
+        }
+        const circleGeometry = new THREE.BufferGeometry().setFromPoints(new Array(CIRCLE_SEGMENTS + 1).fill(new THREE.Vector3()));
+        spotLightDownLaserHelperCircle = new THREE.Line(circleGeometry, spotLightLaserMaterial);
+        scene.add(spotLightDownLaserHelperCircle); // Add to scene
+
+        if (typeof updateSpotLightLaserHelper === 'function') {
+            updateSpotLightLaserHelper(spotLightDown, spotLightDownLaserHelperLines, spotLightDownLaserHelperCircle);
+        }
 
         // Optional: Add a helper to visualize the original SpotLight.
         const spotLightDownHelper = new THREE.SpotLightHelper(spotLightDown);
-        scene.add(spotLightDownHelper);
+        // scene.add(spotLightDownHelper);
 
         // Configure and attach the New SpotLight to the model
         const spotLightFaceTargetObject = new THREE.Object3D();
@@ -239,7 +405,28 @@ gltfLoader.load(
 
         // Optional: Add a helper to visualize the New SpotLight.
         const spotLightFaceHelper = new THREE.SpotLightHelper(spotLightFace);
-        scene.add(spotLightFaceHelper);
+        // scene.add(spotLightFaceHelper);
+
+        // Ensure spotLightFace and its target's matrices are updated for helper initialization
+        spotLightFace.target.updateMatrixWorld(true);
+        spotLightFace.updateMatrixWorld(true);
+
+        // Initialize laser visual for spotLightFace
+        // const spotLightLaserMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 }); // Already defined for spotLightDown
+        spotLightFaceLaserHelperLines = []; // Clear in case of re-load
+        for (let i = 0; i < NUM_CONE_LINES; i++) {
+            const geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+            const line = new THREE.Line(geometry, dirLaserMaterial); // Reuse dirLaserMaterial or spotLightLaserMaterial
+            spotLightFaceLaserHelperLines.push(line);
+            scene.add(line);
+        }
+        const faceCircleGeometry = new THREE.BufferGeometry().setFromPoints(new Array(CIRCLE_SEGMENTS + 1).fill(new THREE.Vector3()));
+        spotLightFaceLaserHelperCircle = new THREE.Line(faceCircleGeometry, dirLaserMaterial); // Reuse material
+        scene.add(spotLightFaceLaserHelperCircle);
+
+        if (typeof updateSpotLightLaserHelper === 'function') {
+            updateSpotLightLaserHelper(spotLightFace, spotLightFaceLaserHelperLines, spotLightFaceLaserHelperCircle);
+        }
 
         interactiveObjects.push(model); // Add model for laser interaction
 
@@ -536,6 +723,51 @@ function animate() {
         laserLine4.material.color.setHex(0xff0000).multiplyScalar(brightnessScalar);
     }
 
+    // Apply pulsing to directional light helper laser material
+    if (directionalLightLaserHelper && directionalLightLaserHelper.material) {
+        // Ensure the material instance is the one we expect (dirLaserMaterial)
+        // This check might be redundant if we are sure, but good for safety.
+        if (directionalLightLaserHelper.material === dirLaserMaterial) {
+            dirLaserMaterial.color.setHex(0xff0000).multiplyScalar(brightnessScalar);
+        } else { // If it's a different material instance for some reason, update it directly
+            directionalLightLaserHelper.material.color.setHex(0xff0000).multiplyScalar(brightnessScalar);
+        }
+    }
+
+    // Apply pulsing to spotLightDown helper laser materials
+    // Note: spotLightDownLaserHelperLines and spotLightDownLaserHelperCircle use spotLightLaserMaterial
+    // So, we only need to update spotLightLaserMaterial once.
+    // First, find the material instance if not globally accessible or if there's a concern it might change.
+    // Assuming spotLightLaserMaterial is the one used and is accessible:
+    if (typeof spotLightLaserMaterial !== 'undefined' && spotLightLaserMaterial && spotLightLaserMaterial.isMaterial) {
+         spotLightLaserMaterial.color.setHex(0xff0000).multiplyScalar(brightnessScalar);
+    } else {
+        // Fallback: If spotLightLaserMaterial is not directly accessible or was not the one used, iterate
+        if (spotLightDownLaserHelperLines && spotLightDownLaserHelperLines.length > 0 && spotLightDownLaserHelperLines[0].material) {
+            spotLightDownLaserHelperLines[0].material.color.setHex(0xff0000).multiplyScalar(brightnessScalar);
+        }
+        // The lines in spotLightDownLaserHelperLines should share the same material instance.
+        // So updating one should update all. Same for the circle if it shares.
+        // If circle has a separate instance and needs individual update:
+        // if (spotLightDownLaserHelperCircle && spotLightDownLaserHelperCircle.material && spotLightDownLaserHelperCircle.material !== spotLightDownLaserHelperLines[0].material) {
+        //     spotLightDownLaserHelperCircle.material.color.setHex(0xff0000).multiplyScalar(brightnessScalar);
+        // }
+    }
+
+    // Apply pulsing to spotLightFace helper laser materials
+    // Note: spotLightFaceLaserHelperLines and spotLightFaceLaserHelperCircle reuse dirLaserMaterial.
+    // dirLaserMaterial is already updated above for the directionalLightLaserHelper.
+    // So, no separate update is needed here if they indeed share dirLaserMaterial.
+    // If they were to use a *different* instance of a red material, that would need updating:
+    // e.g. if spotLightFaceLaserHelperLines[0].material was someOtherMaterial...
+    // spotLightFaceLaserHelperLines.forEach(line => {
+    //     if (line && line.material) line.material.color.setHex(0xff0000).multiplyScalar(brightnessScalar);
+    // });
+    // if (spotLightFaceLaserHelperCircle && spotLightFaceLaserHelperCircle.material) {
+    //     spotLightFaceLaserHelperCircle.material.color.setHex(0xff0000).multiplyScalar(brightnessScalar);
+    // }
+
+
     // Update all laser lines using the new reusable function
     if (laserOrigin1 && initialLaserDirection1) { // Ensure origin and direction are calculated for laser 1
         updateLaserLineGeometry(laserLine, laserOrigin1, initialLaserDirection1, laserRaycaster, interactiveObjects, MAX_BOUNCES, MAX_LASER_LENGTH);
@@ -548,6 +780,32 @@ function animate() {
     }
     if (laserOrigin4 && initialLaserDirection4) {
         updateLaserLineGeometry(laserLine4, laserOrigin4, initialLaserDirection4, laserRaycaster, interactiveObjects, MAX_BOUNCES, MAX_LASER_LENGTH);
+    }
+
+    // Update the directional light laser helper each frame
+    if (typeof updateDirectionalLightLaserHelper === 'function') {
+        updateDirectionalLightLaserHelper();
+    }
+
+    // Update spotLightDown laser helper each frame
+    if (typeof updateSpotLightLaserHelper === 'function' && spotLightDown && model.parent === scene) { // Check if model (and thus spotlight) is in scene
+        // Ensure spotlight and its target are updated if they are part of the model that might be re-parented or transformed
+        if (spotLightDown.parent) spotLightDown.parent.updateMatrixWorld(true);
+        else spotLightDown.updateMatrixWorld(true);
+        if (spotLightDown.target.parent) spotLightDown.target.parent.updateMatrixWorld(true);
+        else spotLightDown.target.updateMatrixWorld(true);
+
+        updateSpotLightLaserHelper(spotLightDown, spotLightDownLaserHelperLines, spotLightDownLaserHelperCircle);
+    }
+
+    // Update spotLightFace laser helper each frame
+    if (typeof updateSpotLightLaserHelper === 'function' && spotLightFace && model.parent === scene) { // Check if model (and thus spotlight) is in scene
+        if (spotLightFace.parent) spotLightFace.parent.updateMatrixWorld(true);
+        else spotLightFace.updateMatrixWorld(true);
+        if (spotLightFace.target.parent) spotLightFace.target.parent.updateMatrixWorld(true);
+        else spotLightFace.target.updateMatrixWorld(true);
+
+        updateSpotLightLaserHelper(spotLightFace, spotLightFaceLaserHelperLines, spotLightFaceLaserHelperCircle);
     }
 
     renderer.render(scene, camera);
