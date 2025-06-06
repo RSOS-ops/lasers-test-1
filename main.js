@@ -10,6 +10,9 @@ scene.background = new THREE.Color(0x000000);
 // Clock for animation timing
 const clock = new THREE.Clock();
 
+// Raycaster for Lasers
+const laserRaycaster = new THREE.Raycaster();
+
 // Camera Setup
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
@@ -59,26 +62,39 @@ spotLightFace.decay = 0.5;
 let model;
 
 // Laser Global Variables
+const laserOffset1 = new THREE.Vector3(-0.8, 0.8, -1); // Top-left
+const laserOffset2 = new THREE.Vector3(0.8, 0.8, -1);  // Top-right
+const laserOffset3 = new THREE.Vector3(-0.8, -0.8, -1);// Bottom-left
+const laserOffset4 = new THREE.Vector3(0.8, -0.8, -1); // Bottom-right
+
 let laserLine;
-const laserOrigin = new THREE.Vector3(Math.random() * 20 - 10, Math.random() * 20 - 10, Math.random() * 20 - 10);
-const initialLaserDirection = new THREE.Vector3().subVectors(new THREE.Vector3(0,0,0), laserOrigin).normalize();
+let laserOrigin;
+// const laserOrigin = new THREE.Vector3(Math.random() * 20 - 10, Math.random() * 20 - 10, Math.random() * 20 - 10);
+let initialLaserDirection;
+// const initialLaserDirection = new THREE.Vector3().subVectors(new THREE.Vector3(0,0,0), laserOrigin).normalize();
 
 // Second Laser Global Variables
 let laserLine2;
-const laserOrigin2 = new THREE.Vector3(Math.random() * 20 - 10, Math.random() * 20 - 10, Math.random() * 20 - 10);
-const initialLaserDirection2 = new THREE.Vector3().subVectors(new THREE.Vector3(0,0,0), laserOrigin2).normalize();
+let laserOrigin2;
+// const laserOrigin2 = new THREE.Vector3(Math.random() * 20 - 10, Math.random() * 20 - 10, Math.random() * 20 - 10);
+let initialLaserDirection2;
+// const initialLaserDirection2 = new THREE.Vector3().subVectors(new THREE.Vector3(0,0,0), laserOrigin2).normalize();
 const laserMaterial2 = new THREE.LineBasicMaterial({ color: 0xff0000 }); // Red laser for the second laser
 
 // Third Laser Global Variables
 let laserLine3;
-const laserOrigin3 = new THREE.Vector3(Math.random() * 20 - 10, Math.random() * 20 - 10, Math.random() * 20 - 10);
-const initialLaserDirection3 = new THREE.Vector3().subVectors(new THREE.Vector3(0,0,0), laserOrigin3).normalize();
+let laserOrigin3;
+// const laserOrigin3 = new THREE.Vector3(Math.random() * 20 - 10, Math.random() * 20 - 10, Math.random() * 20 - 10);
+let initialLaserDirection3;
+// const initialLaserDirection3 = new THREE.Vector3().subVectors(new THREE.Vector3(0,0,0), laserOrigin3).normalize();
 const laserMaterial3 = new THREE.LineBasicMaterial({ color: 0xff0000 }); // Red laser for the third laser
 
 // Fourth Laser Global Variables
 let laserLine4;
-const laserOrigin4 = new THREE.Vector3(Math.random() * 20 - 10, Math.random() * 20 - 10, Math.random() * 20 - 10);
-const initialLaserDirection4 = new THREE.Vector3().subVectors(new THREE.Vector3(0,0,0), laserOrigin4).normalize();
+let laserOrigin4;
+// const laserOrigin4 = new THREE.Vector3(Math.random() * 20 - 10, Math.random() * 20 - 10, Math.random() * 20 - 10);
+let initialLaserDirection4;
+// const initialLaserDirection4 = new THREE.Vector3().subVectors(new THREE.Vector3(0,0,0), laserOrigin4).normalize();
 const laserMaterial4 = new THREE.LineBasicMaterial({ color: 0xff0000 }); // Red laser for the fourth laser
 
 const interactiveObjects = []; // To store objects the laser can hit
@@ -120,32 +136,32 @@ const modelUrl = 'HoodedCory_NewStart_NewHood_DecimatedCreasedHood-1.glb';
 // Laser Line Setup
 const laserMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 }); // Red laser
 const points = [];
-points.push(laserOrigin.clone());
-points.push(laserOrigin.clone().add(initialLaserDirection.clone().multiplyScalar(MAX_LASER_LENGTH))); // Initial straight line
+// points.push(laserOrigin.clone()); // laserOrigin will be undefined here
+// points.push(laserOrigin.clone().add(initialLaserDirection.clone().multiplyScalar(MAX_LASER_LENGTH))); // Initial straight line
 const laserGeometry = new THREE.BufferGeometry().setFromPoints(points);
 laserLine = new THREE.Line(laserGeometry, laserMaterial);
 scene.add(laserLine);
 
 // Second Laser Line Setup
 const points2 = [];
-points2.push(laserOrigin2.clone());
-points2.push(laserOrigin2.clone().add(initialLaserDirection2.clone().multiplyScalar(MAX_LASER_LENGTH)));
+// points2.push(laserOrigin2.clone()); // laserOrigin2 will be undefined here
+// points2.push(laserOrigin2.clone().add(initialLaserDirection2.clone().multiplyScalar(MAX_LASER_LENGTH)));
 const laserGeometry2 = new THREE.BufferGeometry().setFromPoints(points2);
 laserLine2 = new THREE.Line(laserGeometry2, laserMaterial2);
 scene.add(laserLine2);
 
 // Third Laser Line Setup
 const points3 = [];
-points3.push(laserOrigin3.clone());
-points3.push(laserOrigin3.clone().add(initialLaserDirection3.clone().multiplyScalar(MAX_LASER_LENGTH)));
+// points3.push(laserOrigin3.clone()); // laserOrigin3 will be undefined here
+// points3.push(laserOrigin3.clone().add(initialLaserDirection3.clone().multiplyScalar(MAX_LASER_LENGTH)));
 const laserGeometry3 = new THREE.BufferGeometry().setFromPoints(points3);
 laserLine3 = new THREE.Line(laserGeometry3, laserMaterial3);
 scene.add(laserLine3);
 
 // Fourth Laser Line Setup
 const points4 = [];
-points4.push(laserOrigin4.clone());
-points4.push(laserOrigin4.clone().add(initialLaserDirection4.clone().multiplyScalar(MAX_LASER_LENGTH)));
+// points4.push(laserOrigin4.clone()); // laserOrigin4 will be undefined here
+// points4.push(laserOrigin4.clone().add(initialLaserDirection4.clone().multiplyScalar(MAX_LASER_LENGTH)));
 const laserGeometry4 = new THREE.BufferGeometry().setFromPoints(points4);
 laserLine4 = new THREE.Line(laserGeometry4, laserMaterial4);
 scene.add(laserLine4);
@@ -193,19 +209,17 @@ gltfLoader.load(
     }
 );
 
-// Laser Update Function
-function updateLaser() {
-    const raycaster = new THREE.Raycaster();
+// Reusable Laser Update Function
+function updateLaserLineGeometry(laserLineObj, origin, direction, raycaster, interactiveObjectsArr, maxBounces, maxLaserLength) {
     const points = [];
-
-    let currentOrigin = laserOrigin.clone();
-    let currentDirection = initialLaserDirection.clone();
+    let currentOrigin = origin.clone();
+    let currentDirection = direction.clone();
 
     points.push(currentOrigin.clone());
 
-    for (let i = 0; i < MAX_BOUNCES; i++) {
+    for (let i = 0; i < maxBounces; i++) {
         raycaster.set(currentOrigin, currentDirection);
-        const intersects = raycaster.intersectObjects(interactiveObjects, true);
+        const intersects = raycaster.intersectObjects(interactiveObjectsArr, true);
 
         if (intersects.length > 0) {
             const intersection = intersects[0];
@@ -223,146 +237,17 @@ function updateLaser() {
             currentDirection.reflect(worldNormal);
             currentOrigin.copy(impactPoint).add(currentDirection.clone().multiplyScalar(0.001)); // Offset for next ray
 
-            if (i === MAX_BOUNCES - 1) { // If it's the last bounce, draw the final segment
-                points.push(currentOrigin.clone().add(currentDirection.clone().multiplyScalar(MAX_LASER_LENGTH)));
+            if (i === maxBounces - 1) { // If it's the last bounce, draw the final segment
+                points.push(currentOrigin.clone().add(currentDirection.clone().multiplyScalar(maxLaserLength)));
             }
         } else {
-            points.push(currentOrigin.clone().add(currentDirection.clone().multiplyScalar(MAX_LASER_LENGTH)));
+            points.push(currentOrigin.clone().add(currentDirection.clone().multiplyScalar(maxLaserLength)));
             break;
         }
     }
 
-    laserLine.geometry.setFromPoints(points);
-    laserLine.geometry.attributes.position.needsUpdate = true;
-}
-
-// Laser Update Function for the second laser
-function updateLaser2() {
-    const raycaster = new THREE.Raycaster();
-    const points = [];
-
-    let currentOrigin = laserOrigin2.clone();
-    let currentDirection = initialLaserDirection2.clone();
-
-    points.push(currentOrigin.clone());
-
-    for (let i = 0; i < MAX_BOUNCES; i++) {
-        raycaster.set(currentOrigin, currentDirection);
-        const intersects = raycaster.intersectObjects(interactiveObjects, true);
-
-        if (intersects.length > 0) {
-            const intersection = intersects[0];
-            const impactPoint = intersection.point;
-            points.push(impactPoint.clone());
-
-            const surfaceNormal = intersection.face.normal.clone();
-            const worldNormal = new THREE.Vector3();
-            worldNormal.copy(surfaceNormal).transformDirection(intersection.object.matrixWorld);
-
-            if (currentDirection.dot(worldNormal) > 0) {
-                worldNormal.negate();
-            }
-
-            currentDirection.reflect(worldNormal);
-            currentOrigin.copy(impactPoint).add(currentDirection.clone().multiplyScalar(0.001)); // Offset for next ray
-
-            if (i === MAX_BOUNCES - 1) { // If it's the last bounce, draw the final segment
-                points.push(currentOrigin.clone().add(currentDirection.clone().multiplyScalar(MAX_LASER_LENGTH)));
-            }
-        } else {
-            points.push(currentOrigin.clone().add(currentDirection.clone().multiplyScalar(MAX_LASER_LENGTH)));
-            break;
-        }
-    }
-
-    laserLine2.geometry.setFromPoints(points);
-    laserLine2.geometry.attributes.position.needsUpdate = true;
-}
-
-// Laser Update Function for the third laser
-function updateLaser3() {
-    const raycaster = new THREE.Raycaster();
-    const points = [];
-
-    let currentOrigin = laserOrigin3.clone();
-    let currentDirection = initialLaserDirection3.clone();
-
-    points.push(currentOrigin.clone());
-
-    for (let i = 0; i < MAX_BOUNCES; i++) {
-        raycaster.set(currentOrigin, currentDirection);
-        const intersects = raycaster.intersectObjects(interactiveObjects, true);
-
-        if (intersects.length > 0) {
-            const intersection = intersects[0];
-            const impactPoint = intersection.point;
-            points.push(impactPoint.clone());
-
-            const surfaceNormal = intersection.face.normal.clone();
-            const worldNormal = new THREE.Vector3();
-            worldNormal.copy(surfaceNormal).transformDirection(intersection.object.matrixWorld);
-
-            if (currentDirection.dot(worldNormal) > 0) {
-                worldNormal.negate();
-            }
-
-            currentDirection.reflect(worldNormal);
-            currentOrigin.copy(impactPoint).add(currentDirection.clone().multiplyScalar(0.001)); // Offset for next ray
-
-            if (i === MAX_BOUNCES - 1) { // If it's the last bounce, draw the final segment
-                points.push(currentOrigin.clone().add(currentDirection.clone().multiplyScalar(MAX_LASER_LENGTH)));
-            }
-        } else {
-            points.push(currentOrigin.clone().add(currentDirection.clone().multiplyScalar(MAX_LASER_LENGTH)));
-            break;
-        }
-    }
-
-    laserLine3.geometry.setFromPoints(points);
-    laserLine3.geometry.attributes.position.needsUpdate = true;
-}
-
-// Laser Update Function for the fourth laser
-function updateLaser4() {
-    const raycaster = new THREE.Raycaster();
-    const points = [];
-
-    let currentOrigin = laserOrigin4.clone();
-    let currentDirection = initialLaserDirection4.clone();
-
-    points.push(currentOrigin.clone());
-
-    for (let i = 0; i < MAX_BOUNCES; i++) {
-        raycaster.set(currentOrigin, currentDirection);
-        const intersects = raycaster.intersectObjects(interactiveObjects, true);
-
-        if (intersects.length > 0) {
-            const intersection = intersects[0];
-            const impactPoint = intersection.point;
-            points.push(impactPoint.clone());
-
-            const surfaceNormal = intersection.face.normal.clone();
-            const worldNormal = new THREE.Vector3();
-            worldNormal.copy(surfaceNormal).transformDirection(intersection.object.matrixWorld);
-
-            if (currentDirection.dot(worldNormal) > 0) {
-                worldNormal.negate();
-            }
-
-            currentDirection.reflect(worldNormal);
-            currentOrigin.copy(impactPoint).add(currentDirection.clone().multiplyScalar(0.001)); // Offset for next ray
-
-            if (i === MAX_BOUNCES - 1) { // If it's the last bounce, draw the final segment
-                points.push(currentOrigin.clone().add(currentDirection.clone().multiplyScalar(MAX_LASER_LENGTH)));
-            }
-        } else {
-            points.push(currentOrigin.clone().add(currentDirection.clone().multiplyScalar(MAX_LASER_LENGTH)));
-            break;
-        }
-    }
-
-    laserLine4.geometry.setFromPoints(points);
-    laserLine4.geometry.attributes.position.needsUpdate = true;
+    laserLineObj.geometry.setFromPoints(points);
+    laserLineObj.geometry.attributes.position.needsUpdate = true;
 }
 
 const rotationSpeed = (2 * Math.PI) / 12; // Radians per second
@@ -379,10 +264,57 @@ function animate() {
     if (model) { // Check if the model is loaded
     }
 
-    updateLaser(); // Call the new laser update function
-    updateLaser2(); // Call the second laser update function
-    updateLaser3(); // Call the third laser update function
-    updateLaser4(); // Call the fourth laser update function
+    // Update laser origins based on camera position and offsets
+    const worldLaserOrigin1 = new THREE.Vector3();
+    worldLaserOrigin1.copy(laserOffset1);
+    worldLaserOrigin1.applyMatrix4(camera.matrixWorld);
+    laserOrigin = worldLaserOrigin1;
+
+    const worldLaserOrigin2 = new THREE.Vector3();
+    worldLaserOrigin2.copy(laserOffset2);
+    worldLaserOrigin2.applyMatrix4(camera.matrixWorld);
+    laserOrigin2 = worldLaserOrigin2;
+
+    const worldLaserOrigin3 = new THREE.Vector3();
+    worldLaserOrigin3.copy(laserOffset3);
+    worldLaserOrigin3.applyMatrix4(camera.matrixWorld);
+    laserOrigin3 = worldLaserOrigin3;
+
+    const worldLaserOrigin4 = new THREE.Vector3();
+    worldLaserOrigin4.copy(laserOffset4);
+    worldLaserOrigin4.applyMatrix4(camera.matrixWorld);
+    laserOrigin4 = worldLaserOrigin4;
+
+    // Update laser directions to point from new origins to control target
+    const direction1 = new THREE.Vector3();
+    direction1.subVectors(controls.target, laserOrigin).normalize();
+    initialLaserDirection = direction1;
+
+    const direction2 = new THREE.Vector3();
+    direction2.subVectors(controls.target, laserOrigin2).normalize();
+    initialLaserDirection2 = direction2;
+
+    const direction3 = new THREE.Vector3();
+    direction3.subVectors(controls.target, laserOrigin3).normalize();
+    initialLaserDirection3 = direction3;
+
+    const direction4 = new THREE.Vector3();
+    direction4.subVectors(controls.target, laserOrigin4).normalize();
+    initialLaserDirection4 = direction4;
+
+    // Update all laser lines using the new reusable function
+    if (laserOrigin && initialLaserDirection) { // Ensure origin and direction are calculated
+        updateLaserLineGeometry(laserLine, laserOrigin, initialLaserDirection, laserRaycaster, interactiveObjects, MAX_BOUNCES, MAX_LASER_LENGTH);
+    }
+    if (laserOrigin2 && initialLaserDirection2) {
+        updateLaserLineGeometry(laserLine2, laserOrigin2, initialLaserDirection2, laserRaycaster, interactiveObjects, MAX_BOUNCES, MAX_LASER_LENGTH);
+    }
+    if (laserOrigin3 && initialLaserDirection3) {
+        updateLaserLineGeometry(laserLine3, laserOrigin3, initialLaserDirection3, laserRaycaster, interactiveObjects, MAX_BOUNCES, MAX_LASER_LENGTH);
+    }
+    if (laserOrigin4 && initialLaserDirection4) {
+        updateLaserLineGeometry(laserLine4, laserOrigin4, initialLaserDirection4, laserRaycaster, interactiveObjects, MAX_BOUNCES, MAX_LASER_LENGTH);
+    }
 
     renderer.render(scene, camera);
 }
