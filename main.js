@@ -4,19 +4,19 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 // Directional Light Laser Helper
-let directionalLightLaserHelper; // Will be THREE.Line object
+let helper_lasers_directional; // Will be THREE.Line object
 
 // SpotLight Down Laser Helper
-let spotLightDownLaserHelperLines = []; // Array of THREE.Line objects for cone
-let spotLightDownLaserHelperCircle; // THREE.Line object for cone base
+let helper_lasers_spotDownConeLines = []; // Array of THREE.Line objects for cone
+let helper_lasers_spotDownCircle; // THREE.Line object for cone base
 
 // SpotLight Face Laser Helper
-let spotLightFaceLaserHelperLines = []; // Array of THREE.Line objects for cone
-let spotLightFaceLaserHelperCircle; // THREE.Line object for cone base
+let helper_lasers_spotFaceConeLines = []; // Array of THREE.Line objects for cone
+let helper_lasers_spotFaceCircle; // THREE.Line object for cone base
 
-// updateDirectionalLightLaserHelper function will be defined further down,
+// helper_lasers_updateDirectionalVisual function will be defined further down,
 // but the variable is global.
-// updateSpotLightLaserHelper will also be defined further down.
+// helper_lasers_updateSpotlightVisual will also be defined further down.
 
 // Scene Setup
 const scene = new THREE.Scene();
@@ -46,8 +46,8 @@ function getRandomVertex(verticesArray) {
 }
 
 // Update function for the Directional Light's laser visual
-function updateDirectionalLightLaserHelper() {
-    if (!directionalLightLaserHelper || !directionalLight || !directionalLight.target) return;
+function helper_lasers_updateDirectionalVisual() {
+    if (!helper_lasers_directional || !directionalLight || !directionalLight.target) return;
 
     // Ensure the target's world matrix is up to date to get the correct world position
     directionalLight.target.updateMatrixWorld(true);
@@ -66,15 +66,15 @@ function updateDirectionalLightLaserHelper() {
 
     const endPoint = new THREE.Vector3().addVectors(startPoint, direction.multiplyScalar(MAX_LASER_LENGTH / 2));
 
-    directionalLightLaserHelper.geometry.setFromPoints([startPoint, endPoint]);
-    directionalLightLaserHelper.geometry.attributes.position.needsUpdate = true;
+    helper_lasers_directional.geometry.setFromPoints([startPoint, endPoint]);
+    helper_lasers_directional.geometry.attributes.position.needsUpdate = true;
 }
 
 // Update function for a SpotLight's laser visual (cone and circle)
 const NUM_CONE_LINES = 4; // Number of lines to represent the spotlight cone
 const CIRCLE_SEGMENTS = 32; // Number of segments for the cone base circle
 
-function updateSpotLightLaserHelper(spotlight, linesArray, circleLine) {
+function helper_lasers_updateSpotlightVisual(spotlight, linesArray, circleLine) {
     if (!spotlight || !spotlight.target || !linesArray || !circleLine) return;
     if (linesArray.some(line => !line) || !circleLine) return; // Ensure all line objects exist
 
@@ -219,16 +219,16 @@ directionalLight.target = directionalLightTarget;
 directionalLight.target.updateMatrixWorld(true);
 
 // Create and add the Directional Light Laser Helper
-const dirLaserMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
+const helper_lasers_mainMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
 // Initialize with two dummy points; they will be updated immediately.
 const dirLaserPoints = [new THREE.Vector3(0,0,0), new THREE.Vector3(0,1,0)];
 const dirLaserGeometry = new THREE.BufferGeometry().setFromPoints(dirLaserPoints);
-directionalLightLaserHelper = new THREE.Line(dirLaserGeometry, dirLaserMaterial);
-scene.add(directionalLightLaserHelper);
+helper_lasers_directional = new THREE.Line(dirLaserGeometry, helper_lasers_mainMaterial);
+scene.add(helper_lasers_directional);
 
 // Call the update function once to set the correct initial position/direction
-if (typeof updateDirectionalLightLaserHelper === 'function') {
-    updateDirectionalLightLaserHelper();
+if (typeof helper_lasers_updateDirectionalVisual === 'function') {
+    helper_lasers_updateDirectionalVisual();
 }
 
 // Optional: Add a helper to visualize the DirectionalLight.
@@ -373,20 +373,20 @@ gltfLoader.load(
         spotLightDown.updateMatrixWorld(true); // Ensure spotlight's matrix is updated for helper init
 
         // Initialize laser visual for spotLightDown
-        const spotLightLaserMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
-        spotLightDownLaserHelperLines = []; // Clear in case of re-load or multiple calls
+        const helper_lasers_spotDownMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
+        helper_lasers_spotDownConeLines = []; // Clear in case of re-load or multiple calls
         for (let i = 0; i < NUM_CONE_LINES; i++) {
             const geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
-            const line = new THREE.Line(geometry, spotLightLaserMaterial);
-            spotLightDownLaserHelperLines.push(line);
+            const line = new THREE.Line(geometry, helper_lasers_spotDownMaterial);
+            helper_lasers_spotDownConeLines.push(line);
             scene.add(line); // Add to scene, though it will be parented to the model by spotlight logic
         }
         const circleGeometry = new THREE.BufferGeometry().setFromPoints(new Array(CIRCLE_SEGMENTS + 1).fill(new THREE.Vector3()));
-        spotLightDownLaserHelperCircle = new THREE.Line(circleGeometry, spotLightLaserMaterial);
-        scene.add(spotLightDownLaserHelperCircle); // Add to scene
+        helper_lasers_spotDownCircle = new THREE.Line(circleGeometry, helper_lasers_spotDownMaterial);
+        scene.add(helper_lasers_spotDownCircle); // Add to scene
 
-        if (typeof updateSpotLightLaserHelper === 'function') {
-            updateSpotLightLaserHelper(spotLightDown, spotLightDownLaserHelperLines, spotLightDownLaserHelperCircle);
+        if (typeof helper_lasers_updateSpotlightVisual === 'function') {
+            helper_lasers_updateSpotlightVisual(spotLightDown, helper_lasers_spotDownConeLines, helper_lasers_spotDownCircle);
         }
 
         // Optional: Add a helper to visualize the original SpotLight.
@@ -413,19 +413,19 @@ gltfLoader.load(
 
         // Initialize laser visual for spotLightFace
         // const spotLightLaserMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 }); // Already defined for spotLightDown
-        spotLightFaceLaserHelperLines = []; // Clear in case of re-load
+        helper_lasers_spotFaceConeLines = []; // Clear in case of re-load
         for (let i = 0; i < NUM_CONE_LINES; i++) {
             const geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
             const line = new THREE.Line(geometry, dirLaserMaterial); // Reuse dirLaserMaterial or spotLightLaserMaterial
-            spotLightFaceLaserHelperLines.push(line);
+            helper_lasers_spotFaceConeLines.push(line);
             scene.add(line);
         }
         const faceCircleGeometry = new THREE.BufferGeometry().setFromPoints(new Array(CIRCLE_SEGMENTS + 1).fill(new THREE.Vector3()));
-        spotLightFaceLaserHelperCircle = new THREE.Line(faceCircleGeometry, dirLaserMaterial); // Reuse material
-        scene.add(spotLightFaceLaserHelperCircle);
+        helper_lasers_spotFaceCircle = new THREE.Line(faceCircleGeometry, helper_lasers_mainMaterial); // Reuse material
+        scene.add(helper_lasers_spotFaceCircle);
 
-        if (typeof updateSpotLightLaserHelper === 'function') {
-            updateSpotLightLaserHelper(spotLightFace, spotLightFaceLaserHelperLines, spotLightFaceLaserHelperCircle);
+        if (typeof helper_lasers_updateSpotlightVisual === 'function') {
+            helper_lasers_updateSpotlightVisual(spotLightFace, helper_lasers_spotFaceConeLines, helper_lasers_spotFaceCircle);
         }
 
         interactiveObjects.push(model); // Add model for laser interaction
@@ -724,40 +724,40 @@ function animate() {
     }
 
     // Apply pulsing to directional light helper laser material
-    if (directionalLightLaserHelper && directionalLightLaserHelper.material) {
-        // Ensure the material instance is the one we expect (dirLaserMaterial)
+    if (helper_lasers_directional && helper_lasers_directional.material) {
+        // Ensure the material instance is the one we expect (helper_lasers_mainMaterial)
         // This check might be redundant if we are sure, but good for safety.
-        if (directionalLightLaserHelper.material === dirLaserMaterial) {
-            dirLaserMaterial.color.setHex(0xff0000).multiplyScalar(brightnessScalar);
+        if (helper_lasers_directional.material === helper_lasers_mainMaterial) {
+            helper_lasers_mainMaterial.color.setHex(0xff0000).multiplyScalar(brightnessScalar);
         } else { // If it's a different material instance for some reason, update it directly
-            directionalLightLaserHelper.material.color.setHex(0xff0000).multiplyScalar(brightnessScalar);
+            helper_lasers_directional.material.color.setHex(0xff0000).multiplyScalar(brightnessScalar);
         }
     }
 
     // Apply pulsing to spotLightDown helper laser materials
-    // Note: spotLightDownLaserHelperLines and spotLightDownLaserHelperCircle use spotLightLaserMaterial
-    // So, we only need to update spotLightLaserMaterial once.
+    // Note: helper_lasers_spotDownConeLines and helper_lasers_spotDownCircle use helper_lasers_spotDownMaterial
+    // So, we only need to update helper_lasers_spotDownMaterial once.
     // First, find the material instance if not globally accessible or if there's a concern it might change.
-    // Assuming spotLightLaserMaterial is the one used and is accessible:
-    if (typeof spotLightLaserMaterial !== 'undefined' && spotLightLaserMaterial && spotLightLaserMaterial.isMaterial) {
-         spotLightLaserMaterial.color.setHex(0xff0000).multiplyScalar(brightnessScalar);
+    // Assuming helper_lasers_spotDownMaterial is the one used and is accessible:
+    if (typeof helper_lasers_spotDownMaterial !== 'undefined' && helper_lasers_spotDownMaterial && helper_lasers_spotDownMaterial.isMaterial) {
+         helper_lasers_spotDownMaterial.color.setHex(0xff0000).multiplyScalar(brightnessScalar);
     } else {
-        // Fallback: If spotLightLaserMaterial is not directly accessible or was not the one used, iterate
-        if (spotLightDownLaserHelperLines && spotLightDownLaserHelperLines.length > 0 && spotLightDownLaserHelperLines[0].material) {
-            spotLightDownLaserHelperLines[0].material.color.setHex(0xff0000).multiplyScalar(brightnessScalar);
+        // Fallback: If helper_lasers_spotDownMaterial is not directly accessible or was not the one used, iterate
+        if (helper_lasers_spotDownConeLines && helper_lasers_spotDownConeLines.length > 0 && helper_lasers_spotDownConeLines[0].material) {
+            helper_lasers_spotDownConeLines[0].material.color.setHex(0xff0000).multiplyScalar(brightnessScalar); // This would pulse the shared material
         }
-        // The lines in spotLightDownLaserHelperLines should share the same material instance.
+        // The lines in helper_lasers_spotDownConeLines should share the same material instance.
         // So updating one should update all. Same for the circle if it shares.
         // If circle has a separate instance and needs individual update:
-        // if (spotLightDownLaserHelperCircle && spotLightDownLaserHelperCircle.material && spotLightDownLaserHelperCircle.material !== spotLightDownLaserHelperLines[0].material) {
-        //     spotLightDownLaserHelperCircle.material.color.setHex(0xff0000).multiplyScalar(brightnessScalar);
+        // if (helper_lasers_spotDownCircle && helper_lasers_spotDownCircle.material && helper_lasers_spotDownCircle.material !== helper_lasers_spotDownConeLines[0].material) {
+        //     helper_lasers_spotDownCircle.material.color.setHex(0xff0000).multiplyScalar(brightnessScalar);
         // }
     }
 
     // Apply pulsing to spotLightFace helper laser materials
-    // Note: spotLightFaceLaserHelperLines and spotLightFaceLaserHelperCircle reuse dirLaserMaterial.
-    // dirLaserMaterial is already updated above for the directionalLightLaserHelper.
-    // So, no separate update is needed here if they indeed share dirLaserMaterial.
+    // Note: spotLightFaceLaserHelperLines and spotLightFaceLaserHelperCircle reuse helper_lasers_mainMaterial.
+    // helper_lasers_mainMaterial is already updated above for the helper_lasers_directional.
+    // So, no separate update is needed here if they indeed share helper_lasers_mainMaterial.
     // If they were to use a *different* instance of a red material, that would need updating:
     // e.g. if spotLightFaceLaserHelperLines[0].material was someOtherMaterial...
     // spotLightFaceLaserHelperLines.forEach(line => {
@@ -783,29 +783,29 @@ function animate() {
     }
 
     // Update the directional light laser helper each frame
-    if (typeof updateDirectionalLightLaserHelper === 'function') {
-        updateDirectionalLightLaserHelper();
+    if (typeof helper_lasers_updateDirectionalVisual === 'function') {
+        helper_lasers_updateDirectionalVisual();
     }
 
     // Update spotLightDown laser helper each frame
-    if (typeof updateSpotLightLaserHelper === 'function' && spotLightDown && model.parent === scene) { // Check if model (and thus spotlight) is in scene
+    if (typeof helper_lasers_updateSpotlightVisual === 'function' && spotLightDown && model.parent === scene) { // Check if model (and thus spotlight) is in scene
         // Ensure spotlight and its target are updated if they are part of the model that might be re-parented or transformed
         if (spotLightDown.parent) spotLightDown.parent.updateMatrixWorld(true);
         else spotLightDown.updateMatrixWorld(true);
         if (spotLightDown.target.parent) spotLightDown.target.parent.updateMatrixWorld(true);
         else spotLightDown.target.updateMatrixWorld(true);
 
-        updateSpotLightLaserHelper(spotLightDown, spotLightDownLaserHelperLines, spotLightDownLaserHelperCircle);
+        helper_lasers_updateSpotlightVisual(spotLightDown, helper_lasers_spotDownConeLines, helper_lasers_spotDownCircle);
     }
 
     // Update spotLightFace laser helper each frame
-    if (typeof updateSpotLightLaserHelper === 'function' && spotLightFace && model.parent === scene) { // Check if model (and thus spotlight) is in scene
+    if (typeof helper_lasers_updateSpotlightVisual === 'function' && spotLightFace && model.parent === scene) { // Check if model (and thus spotlight) is in scene
         if (spotLightFace.parent) spotLightFace.parent.updateMatrixWorld(true);
         else spotLightFace.updateMatrixWorld(true);
         if (spotLightFace.target.parent) spotLightFace.target.parent.updateMatrixWorld(true);
         else spotLightFace.target.updateMatrixWorld(true);
 
-        updateSpotLightLaserHelper(spotLightFace, spotLightFaceLaserHelperLines, spotLightFaceLaserHelperCircle);
+        helper_lasers_updateSpotlightVisual(spotLightFace, helper_lasers_spotFaceConeLines, helper_lasers_spotFaceCircle);
     }
 
     renderer.render(scene, camera);
