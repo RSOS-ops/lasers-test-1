@@ -78,6 +78,14 @@ const interactiveObjects = []; // To store objects the laser can hit
 const MAX_LASER_LENGTH = 20; // Max length if no hit
 const MAX_BOUNCES = 3; // Max number of laser bounces
 
+// Model Rotation Controls State
+let isDragging = false;
+let previousMousePosition = {
+    x: 0,
+    y: 0
+};
+const modelRotationSpeed = 0.005;
+
 function adjustCameraForModel() {
     if (!model) return;
 
@@ -386,4 +394,44 @@ window.addEventListener('resize', () => {
     } else {
         camera.updateProjectionMatrix();
     }
+});
+
+renderer.domElement.addEventListener('mousedown', (event) => {
+    isDragging = true;
+    previousMousePosition.x = event.clientX;
+    previousMousePosition.y = event.clientY;
+});
+
+renderer.domElement.addEventListener('mousemove', (event) => {
+    if (isDragging && model) {
+        const deltaX = event.clientX - previousMousePosition.x;
+        const deltaY = event.clientY - previousMousePosition.y;
+
+        // Rotation around the world Y axis based on horizontal mouse movement
+        const deltaQuaternionY = new THREE.Quaternion();
+        // Axis is (0,1,0) for Y; angle is deltaX scaled by rotationSpeed
+        deltaQuaternionY.setFromAxisAngle(new THREE.Vector3(0, 1, 0), deltaX * modelRotationSpeed);
+
+        // Rotation around the world X axis based on vertical mouse movement
+        const deltaQuaternionX = new THREE.Quaternion();
+        // Axis is (1,0,0) for X; angle is deltaY scaled by rotationSpeed
+        deltaQuaternionX.setFromAxisAngle(new THREE.Vector3(1, 0, 0), deltaY * modelRotationSpeed);
+
+        // Apply the rotations to the model's quaternion.
+        // Pre-multiply applies the rotation relative to the world coordinate system.
+        // The order of Y then X is a common choice, but can be swapped to change the feel.
+        model.quaternion.premultiply(deltaQuaternionY);
+        model.quaternion.premultiply(deltaQuaternionX);
+
+        previousMousePosition.x = event.clientX;
+        previousMousePosition.y = event.clientY;
+    }
+});
+
+renderer.domElement.addEventListener('mouseup', () => {
+    isDragging = false;
+});
+
+renderer.domElement.addEventListener('mouseout', () => {
+    isDragging = false;
 });
