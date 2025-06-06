@@ -37,7 +37,7 @@ const clock = new THREE.Clock();
 const RAVE_LASER_SYSTEM_1_ORIGIN_SPHERE_RADIUS = 10; // Radius for the invisible sphere where rave-laser-system-1 originate
 const CAMERA_ROTATION_THRESHOLD = THREE.MathUtils.degToRad(15); // Min camera rotation (radians) to be considered 'significant movement'
 const CAMERA_POSITION_THRESHOLD = 0.1; // Min camera position change (world units) for 'significant movement'
-const RAVE_LASER_SYSTEM_1_STILLNESS_LIMIT = 1.5; // Duration (seconds) camera must be 'still' to trigger rave-laser-system-1 jump
+const RAVE_LASER_SYSTEM_1_STILLNESS_LIMIT = 0.5; // Duration (seconds) camera must be 'still' to trigger rave-laser-system-1 jump
 
 const BASE_RAVE_LASER_SYSTEM_1_PULSE_FREQUENCY = 0.5; // Base rave-laser-system-1 pulse frequency (cycles per second) when camera is still
 const RAVE_LASER_SYSTEM_1_PULSE_FREQUENCY_SENSITIVITY = 5.0; // How much camera movement speed influences pulse frequency
