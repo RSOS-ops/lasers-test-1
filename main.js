@@ -86,7 +86,7 @@ directionalLight.target = directionalLightTarget;
 
 // Optional: Add a helper to visualize the DirectionalLight.
 const directionalLightHelper = new THREE.DirectionalLightHelper(directionalLight, 0); // Using a size of 2 for the helper
-scene.add(directionalLightHelper);
+// scene.add(directionalLightHelper);
 
 const spotLightDown = new THREE.SpotLight(0xffffff, 50);
 spotLightDown.distance = 1; // Adjusted for potentially different model size
@@ -232,7 +232,7 @@ gltfLoader.load(
 
         // Optional: Add a helper to visualize the original SpotLight.
         const spotLightDownHelper = new THREE.SpotLightHelper(spotLightDown);
-        scene.add(spotLightDownHelper);
+        // scene.add(spotLightDownHelper);
 
         // Configure and attach the New SpotLight to the model
         const spotLightFaceTargetObject = new THREE.Object3D();
@@ -246,7 +246,7 @@ gltfLoader.load(
 
         // Optional: Add a helper to visualize the New SpotLight.
         const spotLightFaceHelper = new THREE.SpotLightHelper(spotLightFace);
-        scene.add(spotLightFaceHelper);
+        // scene.add(spotLightFaceHelper);
 
         interactiveObjects.push(model); // Add model for rave-laser-system-1 interaction
 
@@ -268,7 +268,7 @@ gltfLoader.load(
         console.log('Extracted ' + modelVertices.length + ' vertices from the model.');
 
         initializeLasers(); // Initialize rave-laser-system-1 now that model vertices are available
-        initializeSpotlightLasers(); // Add this call
+        // initializeSpotlightLasers(); // Add this call
     },
     (xhr) => {
         console.log((xhr.loaded / xhr.total * 100) + '% loaded');
@@ -328,46 +328,46 @@ function initializeLasers() {
     console.log("rave-laser-system-1 initialized.");
 }
 
-function initializeSpotlightLasers() {
-    if (!model || !spotLightDown || !spotLightFace || !spotLightDown.target || !spotLightFace.target) {
-        console.warn("initializeSpotlightLasers: Model or spotlights not ready.");
-        return;
-    }
-
-    const worldSpotLightDownPos = new THREE.Vector3();
-    spotLightDown.getWorldPosition(worldSpotLightDownPos);
-
-    const worldSpotLightDownTargetPos = new THREE.Vector3();
-    spotLightDown.target.getWorldPosition(worldSpotLightDownTargetPos);
-
-    const worldSpotLightFacePos = new THREE.Vector3();
-    spotLightFace.getWorldPosition(worldSpotLightFacePos);
-
-    const worldSpotLightFaceTargetPos = new THREE.Vector3();
-    spotLightFace.target.getWorldPosition(worldSpotLightFaceTargetPos);
-
-    // Spotlight Down Laser
-    const spotlightDownLaserPoints = [];
-    spotlightDownLaserPoints.push(worldSpotLightDownPos.clone());
-    spotlightDownLaserPoints.push(worldSpotLightDownTargetPos.clone());
-    const spotlightDownLaserGeometry = new THREE.BufferGeometry().setFromPoints(spotlightDownLaserPoints);
-    // Using existing raveLaserSystem1Material for red color as requested
-    spotlightDownLaserLine = new THREE.Line(spotlightDownLaserGeometry, spotlightDownLaserMaterial);
-    spotlightDownLaserLine.name = "spotlight-down-laser"; // Assign name
-    scene.add(spotlightDownLaserLine);
-
-    // Spotlight Face Laser
-    const spotlightFaceLaserPoints = [];
-    spotlightFaceLaserPoints.push(worldSpotLightFacePos.clone());
-    spotlightFaceLaserPoints.push(worldSpotLightFaceTargetPos.clone());
-    const spotlightFaceLaserGeometry = new THREE.BufferGeometry().setFromPoints(spotlightFaceLaserPoints);
-    // Using existing raveLaserSystem1Material for red color
-    spotlightFaceLaserLine = new THREE.Line(spotlightFaceLaserGeometry, spotlightFaceLaserMaterial);
-    spotlightFaceLaserLine.name = "spotlight-face-laser"; // Assign name
-    scene.add(spotlightFaceLaserLine);
-
-    console.log("Spotlight lasers initialized.");
-}
+// function initializeSpotlightLasers() {
+//     if (!model || !spotLightDown || !spotLightFace || !spotLightDown.target || !spotLightFace.target) {
+//         console.warn("initializeSpotlightLasers: Model or spotlights not ready.");
+//         return;
+//     }
+//
+//     const worldSpotLightDownPos = new THREE.Vector3();
+//     spotLightDown.getWorldPosition(worldSpotLightDownPos);
+//
+//     const worldSpotLightDownTargetPos = new THREE.Vector3();
+//     spotLightDown.target.getWorldPosition(worldSpotLightDownTargetPos);
+//
+//     const worldSpotLightFacePos = new THREE.Vector3();
+//     spotLightFace.getWorldPosition(worldSpotLightFacePos);
+//
+//     const worldSpotLightFaceTargetPos = new THREE.Vector3();
+//     spotLightFace.target.getWorldPosition(worldSpotLightFaceTargetPos);
+//
+//     // Spotlight Down Laser
+//     const spotlightDownLaserPoints = [];
+//     spotlightDownLaserPoints.push(worldSpotLightDownPos.clone());
+//     spotlightDownLaserPoints.push(worldSpotLightDownTargetPos.clone());
+//     const spotlightDownLaserGeometry = new THREE.BufferGeometry().setFromPoints(spotlightDownLaserPoints);
+//     // Using existing raveLaserSystem1Material for red color as requested
+//     spotlightDownLaserLine = new THREE.Line(spotlightDownLaserGeometry, spotlightDownLaserMaterial);
+//     spotlightDownLaserLine.name = "spotlight-down-laser"; // Assign name
+//     scene.add(spotlightDownLaserLine);
+//
+//     // Spotlight Face Laser
+//     const spotlightFaceLaserPoints = [];
+//     spotlightFaceLaserPoints.push(worldSpotLightFacePos.clone());
+//     spotlightFaceLaserPoints.push(worldSpotLightFaceTargetPos.clone());
+//     const spotlightFaceLaserGeometry = new THREE.BufferGeometry().setFromPoints(spotlightFaceLaserPoints);
+//     // Using existing raveLaserSystem1Material for red color
+//     spotlightFaceLaserLine = new THREE.Line(spotlightFaceLaserGeometry, spotlightFaceLaserMaterial);
+//     spotlightFaceLaserLine.name = "spotlight-face-laser"; // Assign name
+//     scene.add(spotlightFaceLaserLine);
+//
+//     console.log("Spotlight lasers initialized.");
+// }
 
 // Reusable rave-laser-system-1 Update Function
 function updateLaserLineGeometry(laserLineObj, origin, direction, raycaster, interactiveObjectsArr, maxBounces, raveLaserSystem1MaxLaserLength) {
@@ -586,33 +586,33 @@ function animate() {
     }
 
     // Update Spotlight Lasers
-    if (spotlightDownLaserLine && spotLightDown && spotLightDown.target && spotLightDown.parent === model) { // Check if model is parent
-        const worldSpotLightDownPos = new THREE.Vector3();
-        spotLightDown.getWorldPosition(worldSpotLightDownPos);
+    // if (spotlightDownLaserLine && spotLightDown && spotLightDown.target && spotLightDown.parent === model) { // Check if model is parent
+    //     const worldSpotLightDownPos = new THREE.Vector3();
+    //     spotLightDown.getWorldPosition(worldSpotLightDownPos);
 
         const worldSpotLightDownTargetPos = new THREE.Vector3();
         spotLightDown.target.getWorldPosition(worldSpotLightDownTargetPos);
 
         const points = [];
         points.push(worldSpotLightDownPos.clone());
-        points.push(worldSpotLightDownTargetPos.clone());
-        spotlightDownLaserLine.geometry.setFromPoints(points);
-        spotlightDownLaserLine.geometry.attributes.position.needsUpdate = true;
-    }
+        // points.push(worldSpotLightDownTargetPos.clone());
+        // spotlightDownLaserLine.geometry.setFromPoints(points);
+        // spotlightDownLaserLine.geometry.attributes.position.needsUpdate = true;
+    // }
 
-    if (spotlightFaceLaserLine && spotLightFace && spotLightFace.target && spotLightFace.parent === model) { // Check if model is parent
-        const worldSpotLightFacePos = new THREE.Vector3();
-        spotLightFace.getWorldPosition(worldSpotLightFacePos);
+    // if (spotlightFaceLaserLine && spotLightFace && spotLightFace.target && spotLightFace.parent === model) { // Check if model is parent
+    //     const worldSpotLightFacePos = new THREE.Vector3();
+    //     spotLightFace.getWorldPosition(worldSpotLightFacePos);
 
         const worldSpotLightFaceTargetPos = new THREE.Vector3();
         spotLightFace.target.getWorldPosition(worldSpotLightFaceTargetPos);
 
         const points = [];
         points.push(worldSpotLightFacePos.clone());
-        points.push(worldSpotLightFaceTargetPos.clone());
-        spotlightFaceLaserLine.geometry.setFromPoints(points);
-        spotlightFaceLaserLine.geometry.attributes.position.needsUpdate = true;
-    }
+        // points.push(worldSpotLightFaceTargetPos.clone());
+        // spotlightFaceLaserLine.geometry.setFromPoints(points);
+        // spotlightFaceLaserLine.geometry.attributes.position.needsUpdate = true;
+    // }
 
     // Update all rave-laser-system-1 lines using the new reusable function
     if (raveLaserSystem1Origin1 && raveLaserSystem1InitialDirection1) { // Ensure origin and direction are calculated for rave-laser-system-1 1
