@@ -30,10 +30,6 @@ directionalLightTarget.position.set(0, 0, 0);
 scene.add(directionalLightTarget);
 directionalLight.target = directionalLightTarget;
 
-// Optional: Add a helper to visualize the DirectionalLight.
-const directionalLightHelper = new THREE.DirectionalLightHelper(directionalLight, 2); // Using a size of 2 for the helper
-scene.add(directionalLightHelper);
-
 const spotLightDown = new THREE.SpotLight(0xffffff, 100);
 spotLightDown.distance = 3;
 spotLightDown.angle = Math.PI / 8; // Adjusted for potentially different model size
@@ -166,10 +162,6 @@ gltfLoader.load(
         spotLightDown.target = spotLightDownTargetObject;
         model.add(spotLightDown);
 
-        // Optional: Add a helper to visualize the original SpotLight.
-        const spotLightDownHelper = new THREE.SpotLightHelper(spotLightDown);
-        scene.add(spotLightDownHelper);
-
         // Configure and attach the New SpotLight to the model
         const spotLightFaceTargetObject = new THREE.Object3D();
         model.add(spotLightFaceTargetObject); // Add target as a child of the model.
@@ -179,10 +171,6 @@ gltfLoader.load(
         model.add(spotLightFace); // Add the new spotlight itself as a child of the model.
         // Position the new spotlight relative to the model's local coordinates.
         spotLightFace.position.set(0, -0.25, 0.2);
-
-        // Optional: Add a helper to visualize the New SpotLight.
-        const spotLightFaceHelper = new THREE.SpotLightHelper(spotLightFace);
-        scene.add(spotLightFaceHelper);
 
         interactiveObjects.push(model); // Add model for laser interaction
 
