@@ -112,34 +112,35 @@ let modelVertices = []; // To store world coordinates of model vertices
 // const laserOffset3 = new THREE.Vector3(-0.8, -0.8, -1);// Bottom-left - REMOVED
 // const laserOffset4 = new THREE.Vector3(0.8, -0.8, -1); // Bottom-right - REMOVED
 
-let laserLine; // THREE.Line
-let laserOrigin; // THREE.Vector3
-let initialLaserDirection; // THREE.Vector3
-let laserTargetVertex1; // THREE.Vector3
+// Laser 1
+let laserLine; // THREE.Line object
+let laserOrigin1; // THREE.Vector3 - Current origin of the laser
+let initialLaserDirection1; // THREE.Vector3 - Current direction of the laser
+let laserTargetVertex1; // THREE.Vector3 - Target vertex on the model
 let laserPulseIntensity1 = 1.0; // Current pulse intensity (0-1)
 
-// Second Laser Global Variables
-let laserLine2; // THREE.Line
-let laserOrigin2; // THREE.Vector3
-let initialLaserDirection2; // THREE.Vector3
-let laserTargetVertex2; // THREE.Vector3
-let laserPulseIntensity2 = 1.0; // Current pulse intensity (0-1)
+// Laser 2
+let laserLine2;
+let laserOrigin2;
+let initialLaserDirection2;
+let laserTargetVertex2;
+let laserPulseIntensity2 = 1.0;
 const laserMaterial2 = new THREE.LineBasicMaterial({ color: 0xff0000 }); // Red laser for the second laser
 
-// Third Laser Global Variables
-let laserLine3; // THREE.Line
-let laserOrigin3; // THREE.Vector3
-let initialLaserDirection3; // THREE.Vector3
-let laserTargetVertex3; // THREE.Vector3
-let laserPulseIntensity3 = 1.0; // Current pulse intensity (0-1)
+// Laser 3
+let laserLine3;
+let laserOrigin3;
+let initialLaserDirection3;
+let laserTargetVertex3;
+let laserPulseIntensity3 = 1.0;
 const laserMaterial3 = new THREE.LineBasicMaterial({ color: 0xff0000 }); // Red laser for the third laser
 
-// Fourth Laser Global Variables
-let laserLine4; // THREE.Line
-let laserOrigin4; // THREE.Vector3
-let initialLaserDirection4; // THREE.Vector3
-let laserTargetVertex4; // THREE.Vector3
-let laserPulseIntensity4 = 1.0; // Current pulse intensity (0-1)
+// Laser 4
+let laserLine4;
+let laserOrigin4;
+let initialLaserDirection4;
+let laserTargetVertex4;
+let laserPulseIntensity4 = 1.0;
 const laserMaterial4 = new THREE.LineBasicMaterial({ color: 0xff0000 }); // Red laser for the fourth laser
 
 const interactiveObjects = []; // To store objects the laser can hit (currently just the model)
@@ -273,8 +274,8 @@ function initializeLasers() {
     if (modelVertices.length === 0) {
         console.warn("initializeLasers called before model vertices were extracted. Lasers will use default initialization.");
         // Default initialization if vertices aren't ready
-        laserOrigin1 = new THREE.Vector3(0,0,INVISIBLE_SPHERE_RADIUS);
-        laserTargetVertex1 = new THREE.Vector3(); // Target origin
+        laserOrigin1 = new THREE.Vector3(0,0,INVISIBLE_SPHERE_RADIUS); // Assign to laserOrigin1
+        laserTargetVertex1 = new THREE.Vector3();
 
         laserOrigin2 = new THREE.Vector3(0,0,INVISIBLE_SPHERE_RADIUS);
         laserTargetVertex2 = new THREE.Vector3();
@@ -304,8 +305,8 @@ function initializeLasers() {
     }
 
     // Common for all lasers, calculate initial directions
-    if (laserOrigin1 && laserTargetVertex1) initialLaserDirection1 = new THREE.Vector3().subVectors(laserTargetVertex1, laserOrigin1).normalize();
-    else initialLaserDirection1 = new THREE.Vector3(0,0,-1); // Default direction
+    if (laserOrigin1 && laserTargetVertex1) initialLaserDirection1 = new THREE.Vector3().subVectors(laserTargetVertex1, laserOrigin1).normalize(); // Use laserOrigin1
+    else initialLaserDirection1 = new THREE.Vector3(0,0,-1);
 
     if (laserOrigin2 && laserTargetVertex2) initialLaserDirection2 = new THREE.Vector3().subVectors(laserTargetVertex2, laserOrigin2).normalize();
     else initialLaserDirection2 = new THREE.Vector3(0,0,-1);
@@ -418,6 +419,10 @@ function animate() {
         controls.update();
     }
 
+    // Initialize deltaRotation and deltaPosition to ensure they are defined in the animate scope
+    let deltaRotation = 0;
+    let deltaPosition = 0;
+
     // Camera stillness/movement detection
     if (camera && previousCameraPosition && previousCameraQuaternion) { // Ensure camera is available
         // Initialize previous states on the first valid frame
@@ -426,8 +431,9 @@ function animate() {
             previousCameraQuaternion.copy(camera.quaternion);
         }
 
-        const deltaRotation = previousCameraQuaternion.angleTo(camera.quaternion);
-        const deltaPosition = previousCameraPosition.distanceTo(camera.position);
+        // Calculate actual deltas if previous state is valid
+        deltaRotation = previousCameraQuaternion.angleTo(camera.quaternion);
+        deltaPosition = previousCameraPosition.distanceTo(camera.position);
         let hasCameraMovedSignificantly = false;
 
         if (deltaRotation > CAMERA_ROTATION_THRESHOLD || deltaPosition > CAMERA_POSITION_THRESHOLD) {
@@ -531,8 +537,8 @@ function animate() {
     }
 
     // Update all laser lines using the new reusable function
-    if (laserOrigin && initialLaserDirection) { // Ensure origin and direction are calculated
-        updateLaserLineGeometry(laserLine, laserOrigin, initialLaserDirection, laserRaycaster, interactiveObjects, MAX_BOUNCES, MAX_LASER_LENGTH);
+    if (laserOrigin1 && initialLaserDirection1) { // Ensure origin and direction are calculated for laser 1
+        updateLaserLineGeometry(laserLine, laserOrigin1, initialLaserDirection1, laserRaycaster, interactiveObjects, MAX_BOUNCES, MAX_LASER_LENGTH);
     }
     if (laserOrigin2 && initialLaserDirection2) {
         updateLaserLineGeometry(laserLine2, laserOrigin2, initialLaserDirection2, laserRaycaster, interactiveObjects, MAX_BOUNCES, MAX_LASER_LENGTH);
