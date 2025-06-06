@@ -589,29 +589,29 @@ function animate() {
     // if (spotlightDownLaserLine && spotLightDown && spotLightDown.target && spotLightDown.parent === model) { // Check if model is parent
     //     const worldSpotLightDownPos = new THREE.Vector3();
     //     spotLightDown.getWorldPosition(worldSpotLightDownPos);
-
-        const worldSpotLightDownTargetPos = new THREE.Vector3();
-        spotLightDown.target.getWorldPosition(worldSpotLightDownTargetPos);
-
-        const points = [];
-        points.push(worldSpotLightDownPos.clone());
-        // points.push(worldSpotLightDownTargetPos.clone());
-        // spotlightDownLaserLine.geometry.setFromPoints(points);
-        // spotlightDownLaserLine.geometry.attributes.position.needsUpdate = true;
+    //
+    //     const worldSpotLightDownTargetPos = new THREE.Vector3();
+    //     spotLightDown.target.getWorldPosition(worldSpotLightDownTargetPos);
+    //
+    //     const points = [];
+    //     points.push(worldSpotLightDownPos.clone());
+    //     points.push(worldSpotLightDownTargetPos.clone());
+    //     spotlightDownLaserLine.geometry.setFromPoints(points);
+    //     spotlightDownLaserLine.geometry.attributes.position.needsUpdate = true;
     // }
 
     // if (spotlightFaceLaserLine && spotLightFace && spotLightFace.target && spotLightFace.parent === model) { // Check if model is parent
     //     const worldSpotLightFacePos = new THREE.Vector3();
     //     spotLightFace.getWorldPosition(worldSpotLightFacePos);
-
-        const worldSpotLightFaceTargetPos = new THREE.Vector3();
-        spotLightFace.target.getWorldPosition(worldSpotLightFaceTargetPos);
-
-        const points = [];
-        points.push(worldSpotLightFacePos.clone());
-        // points.push(worldSpotLightFaceTargetPos.clone());
-        // spotlightFaceLaserLine.geometry.setFromPoints(points);
-        // spotlightFaceLaserLine.geometry.attributes.position.needsUpdate = true;
+    //
+    //     const worldSpotLightFaceTargetPos = new THREE.Vector3();
+    //     spotLightFace.target.getWorldPosition(worldSpotLightFaceTargetPos);
+    //
+    //     const points = [];
+    //     points.push(worldSpotLightFacePos.clone());
+    //     points.push(worldSpotLightFaceTargetPos.clone());
+    //     spotlightFaceLaserLine.geometry.setFromPoints(points);
+    //     spotlightFaceLaserLine.geometry.attributes.position.needsUpdate = true;
     // }
 
     // Update all rave-laser-system-1 lines using the new reusable function
